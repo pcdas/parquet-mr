@@ -18,8 +18,6 @@ package parquet.hadoop;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -75,40 +73,6 @@ class InternalParquetRecordReader<T> {
 
   private Path file;
 
-  private boolean closed = false;
-  private ArrayBlockingQueue<T> readQueue = new ArrayBlockingQueue<T>(100000); // Hardcoded size
-  private Thread readThread = new Thread(){
-    public void run(){
-      readQueue.clear();
-      LOG.info("Starting asynchronous reading of records");
-      long readCount = 0;
-      while(readCount < total && ! closed) {
-        try {
-          checkRead(readCount);
-          T cur = recordReader.read();
-//          java.lang.reflect.Method copy = cur.getClass().getMethod("copy");
-//          if(copy != null){
-//            cur = (T)copy.invoke(cur);
-//          }
-          //LOG.info(format("Read a record: %s", cur.toString()));
-          readCount++;
-          if (recordReader.shouldSkipCurrentRecord()) {
-            // this record is being filtered via the filter2 package
-            if (DEBUG) LOG.debug("skipping record");
-            continue;
-          }
-          if(cur != null) {
-            readQueue.put(cur);
-          }
-        }
-        catch(Exception ex){
-          LOG.error(format("Can not read value at %d in block %d in file %s", current, currentBlock, file), ex);
-        }
-      }
-      LOG.info(format("Read %d records, %d still in queue", readCount, readQueue.size()));
-    }
-  };
-
   /**
    * @param readSupport Object which helps reads files of the given type, e.g. Thrift, Avro.
    * @param filter for filtering individual records
@@ -135,9 +99,9 @@ class InternalParquetRecordReader<T> {
     this(readSupport, FilterCompat.get(filter));
   }
 
-  private void checkRead(long readCount) throws IOException {
-    if (readCount == totalCountLoadedSoFar) {
-      if (readCount != 0) {
+  private void checkRead() throws IOException {
+    if (current == totalCountLoadedSoFar) {
+      if (current != 0) {
         long timeAssembling = System.currentTimeMillis() - startedAssemblingCurrentBlockAt;
         totalTimeSpentProcessingRecords += timeAssembling;
         LOG.info("Assembled and processed " + totalCountLoadedSoFar + " records from " + columnCount + " columns in " + totalTimeSpentProcessingRecords + " ms: "+((float)totalCountLoadedSoFar / totalTimeSpentProcessingRecords) + " rec/ms, " + ((float)totalCountLoadedSoFar * columnCount / totalTimeSpentProcessingRecords) + " cell/ms");
@@ -147,11 +111,11 @@ class InternalParquetRecordReader<T> {
         LOG.info("time spent so far " + percentReading + "% reading ("+totalTimeSpentReadingBytes+" ms) and " + percentProcessing + "% processing ("+totalTimeSpentProcessingRecords+" ms)");
       }
 
-      LOG.info("at row " + readCount + ". reading next block");
+      LOG.info("at row " + current + ". reading next block");
       long t0 = System.currentTimeMillis();
       PageReadStore pages = reader.readNextRowGroup();
       if (pages == null) {
-        throw new IOException("expecting more rows but reached last block. Read " + readCount + " out of " + total);
+        throw new IOException("expecting more rows but reached last block. Read " + current + " out of " + total);
       }
       long timeSpentReading = System.currentTimeMillis() - t0;
       totalTimeSpentReadingBytes += timeSpentReading;
@@ -170,8 +134,6 @@ class InternalParquetRecordReader<T> {
     if (reader != null) {
       reader.close();
     }
-    closed = true;
-    readQueue.clear();
   }
 
   public Void getCurrentKey() throws IOException, InterruptedException {
@@ -205,8 +167,6 @@ class InternalParquetRecordReader<T> {
       total += block.getRowCount();
     }
     LOG.info("RecordReader initialized will read a total of " + total + " records.");
-    LOG.info("Starting asynchronous reader thread");
-    readThread.start();
   }
 
   private boolean contains(GroupType group, String[] path, int index) {
@@ -224,64 +184,37 @@ class InternalParquetRecordReader<T> {
     return false;
   }
 
-  public boolean nextKeyValue(){
-    if (current >= total) {
-      LOG.info("Nothing more to read, returning false");
-      return false;
-    }
-    try {
-      currentValue = readQueue.poll(1000, TimeUnit.MILLISECONDS);
-      if(currentValue != null){
+  public boolean nextKeyValue() throws IOException, InterruptedException {
+    boolean recordFound = false;
+
+    while (!recordFound) {
+      // no more records left
+      if (current >= total) { return false; }
+
+      try {
+        checkRead();
+        currentValue = recordReader.read();
         current ++;
+        if (recordReader.shouldSkipCurrentRecord()) {
+          // this record is being filtered via the filter2 package
+          if (DEBUG) LOG.debug("skipping record");
+          continue;
+        }
+
+        if (currentValue == null) {
+          // only happens with FilteredRecordReader at end of block
+          current = totalCountLoadedSoFar;
+          if (DEBUG) LOG.debug("filtered record reader reached end of block");
+          continue;
+        }
+
+        recordFound = true;
+
         if (DEBUG) LOG.debug("read value: " + currentValue);
-        //LOG.info("nextKeyValue: " + currentValue);
-//        if(!debugmsg) {
-//          LOG.info("nextKeyValue called");
-//          LOG.info("Call stack: ", new Exception("call stack"));
-//          LOG.info("Class of currentValue is " + currentValue.getClass().getCanonicalName());
-//          LOG.info("Class of recordReader is " + recordReader.getClass().getCanonicalName());
-//          debugmsg = true;
-//        }
-        return true;
+      } catch (RuntimeException e) {
+        throw new ParquetDecodingException(format("Can not read value at %d in block %d in file %s", current, currentBlock, file), e);
       }
-      LOG.debug("Got no data from the queue, returning false");
-      return false;
     }
-    catch(InterruptedException ex){
-      return false;
-    }
+    return true;
   }
-//  public boolean nextKeyValueInternal() throws IOException, InterruptedException {
-//    boolean recordFound = false;
-//
-//    while (!recordFound) {
-//      // no more records left
-//      if (current >= total) { return false; }
-//
-//      try {
-//        checkRead(current);
-//        currentValue = recordReader.read();
-//        current ++;
-//        if (recordReader.shouldSkipCurrentRecord()) {
-//          // this record is being filtered via the filter2 package
-//          if (DEBUG) LOG.debug("skipping record");
-//          continue;
-//        }
-//
-//        if (currentValue == null) {
-//          // only happens with FilteredRecordReader at end of block
-//          current = totalCountLoadedSoFar;
-//          if (DEBUG) LOG.debug("filtered record reader reached end of block");
-//          continue;
-//        }
-//
-//        recordFound = true;
-//
-//        if (DEBUG) LOG.debug("read value: " + currentValue);
-//      } catch (RuntimeException e) {
-//        throw new ParquetDecodingException(format("Can not read value at %d in block %d in file %s", current, currentBlock, file), e);
-//      }
-//    }
-//    return true;
-//  }
 }
