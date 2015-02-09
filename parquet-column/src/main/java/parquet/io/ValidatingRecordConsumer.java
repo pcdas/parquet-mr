@@ -74,7 +74,8 @@ public class ValidatingRecordConsumer extends RecordConsumer {
   public void endMessage() {
     delegate.endMessage();
     validateMissingFields(types.peek().asGroupType().getFieldCount());
-    previousField.pop();
+    // clear all previous fields that were pushed for validation including -1
+    previousField.clear();
   }
 
   /**
@@ -124,7 +125,9 @@ public class ValidatingRecordConsumer extends RecordConsumer {
     delegate.endGroup();
     validateMissingFields(types.peek().asGroupType().getFieldCount());
     types.pop();
-    previousField.pop();
+    while (previousField.peek() >= 0)
+      previousField.pop(); // clear previous fields that were pushed for validation
+    previousField.pop(); // handle -1 for this group
   }
 
   private void validate(PrimitiveTypeName p) {
