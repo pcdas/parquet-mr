@@ -45,24 +45,26 @@ public class IncrementallyUpdatedFilterPredicateGenerator {
   private static class TypeInfo {
     public final String className;
     public final String primitiveName;
+    public final boolean useObjectEquals;
     public final boolean useComparable;
     public final boolean supportsInequality;
 
-    private TypeInfo(String className, String primitiveName, boolean useComparable, boolean supportsInequality) {
+    private TypeInfo(String className, String primitiveName, boolean useObjectEquals, boolean useComparable, boolean supportsInequality) {
       this.className = className;
       this.primitiveName = primitiveName;
+      this.useObjectEquals = useObjectEquals;
       this.useComparable = useComparable;
       this.supportsInequality = supportsInequality;
     }
   }
 
   private static final TypeInfo[] TYPES = new TypeInfo[]{
-    new TypeInfo("Integer", "int", false, true),
-    new TypeInfo("Long", "long", false, true),
-    new TypeInfo("Boolean", "boolean", false, false),
-    new TypeInfo("Float", "float", false, true),
-    new TypeInfo("Double", "double", false, true),
-    new TypeInfo("Binary", "Binary", true, true),
+    new TypeInfo("Integer", "int", false, false, true),
+    new TypeInfo("Long", "long", false, false, true),
+    new TypeInfo("Boolean", "boolean", false, false, false),
+    new TypeInfo("Float", "float", false, false, true),
+    new TypeInfo("Double", "double", false, false, true),
+    new TypeInfo("Binary", "Binary", true, true, true),
   };
 
   public void run() throws IOException {
@@ -190,7 +192,10 @@ public class IncrementallyUpdatedFilterPredicateGenerator {
         "          @Override\n" +
         "          public void update(" + info.primitiveName + " value) {\n");
 
-    if (info.useComparable) {
+    if (info.useObjectEquals) {
+        add("            setResult(" + objectEquality("value", "target", isEq) + ");\n");
+    }
+    else if (info.useComparable) {
       add("            setResult(" + compareEquality("value", "target", isEq) + ");\n");
     } else {
       add("            setResult(" + (isEq ? "value == target" : "value != target" )  + ");\n");
@@ -261,6 +266,10 @@ public class IncrementallyUpdatedFilterPredicateGenerator {
 
   private String compareEquality(String var, String target, boolean eq) {
     return var + ".compareTo(" + target + ")" + (eq ? " == 0 " : " != 0");
+  }
+
+  private String objectEquality(String var, String target, boolean eq) {
+    return (eq ? "" : "!") + var + ".equals(" + target + ")";
   }
 
   private void add(String s) throws IOException {
