@@ -1,20 +1,25 @@
-/**
- * Copyright 2012 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/* 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package parquet.column.impl;
 
+import static java.lang.Math.max;
+import static java.lang.Math.pow;
 import static parquet.bytes.BytesUtils.getWidthFromMaxInt;
 
 import java.io.IOException;
@@ -22,6 +27,7 @@ import java.io.IOException;
 import parquet.Ints;
 import parquet.Log;
 import parquet.bytes.BytesInput;
+import parquet.bytes.CapacityByteArrayOutputStream;
 import parquet.column.ColumnDescriptor;
 import parquet.column.ColumnWriter;
 import parquet.column.Encoding;
@@ -43,6 +49,7 @@ import parquet.io.api.Binary;
 final class ColumnWriterV2 implements ColumnWriter {
   private static final Log LOG = Log.getLog(ColumnWriterV2.class);
   private static final boolean DEBUG = Log.DEBUG;
+  private static final int MIN_SLAB_SIZE = 64;
 
   private final ColumnDescriptor path;
   private final PageWriter pageWriter;
@@ -57,14 +64,17 @@ final class ColumnWriterV2 implements ColumnWriter {
   public ColumnWriterV2(
       ColumnDescriptor path,
       PageWriter pageWriter,
-      int initialSizePerCol,
-      ParquetProperties parquetProps) {
+      ParquetProperties parquetProps,
+      int pageSize) {
     this.path = path;
     this.pageWriter = pageWriter;
     resetStatistics();
-    this.repetitionLevelColumn = new RunLengthBitPackingHybridEncoder(getWidthFromMaxInt(path.getMaxRepetitionLevel()), initialSizePerCol);
-    this.definitionLevelColumn = new RunLengthBitPackingHybridEncoder(getWidthFromMaxInt(path.getMaxDefinitionLevel()), initialSizePerCol);
-    this.dataColumn = parquetProps.getValuesWriter(path, initialSizePerCol);
+
+    this.repetitionLevelColumn = new RunLengthBitPackingHybridEncoder(getWidthFromMaxInt(path.getMaxRepetitionLevel()), MIN_SLAB_SIZE, pageSize);
+    this.definitionLevelColumn = new RunLengthBitPackingHybridEncoder(getWidthFromMaxInt(path.getMaxDefinitionLevel()), MIN_SLAB_SIZE, pageSize);
+
+    int initialSlabSize = CapacityByteArrayOutputStream.initialSlabSizeHeuristic(MIN_SLAB_SIZE, pageSize, 10);
+    this.dataColumn = parquetProps.getValuesWriter(path, initialSlabSize, pageSize);
   }
 
   private void log(Object value, int r, int d) {

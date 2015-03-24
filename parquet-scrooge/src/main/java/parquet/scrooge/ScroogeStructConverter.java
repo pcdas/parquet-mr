@@ -1,17 +1,20 @@
-/**
- * Copyright 2012 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/* 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package parquet.scrooge;
 
@@ -19,6 +22,7 @@ import com.twitter.scrooge.ThriftStructCodec;
 import com.twitter.scrooge.ThriftStructFieldInfo;
 import parquet.thrift.struct.ThriftField;
 import parquet.thrift.struct.ThriftType;
+import parquet.thrift.struct.ThriftType.StructType.StructOrUnionType;
 import parquet.thrift.struct.ThriftTypeID;
 import scala.collection.JavaConversions;
 import scala.collection.JavaConversions$;
@@ -77,7 +81,11 @@ public class ScroogeStructConverter {
     for (ThriftStructFieldInfo field : scroogeFields) {
       children.add(toThriftField(field));
     }
-    return new ThriftType.StructType(children);
+
+    StructOrUnionType structOrUnionType =
+        isUnion(companionObject.getClass()) ? StructOrUnionType.UNION : StructOrUnionType.STRUCT;
+
+    return new ThriftType.StructType(children, structOrUnionType);
   }
 
   private Iterable<ThriftStructFieldInfo> getFieldInfos(ThriftStructCodec c) {
@@ -283,7 +291,7 @@ public class ScroogeStructConverter {
     Object cObject = companionObjectClass.getField("MODULE$").get(null);
     Method listMethod = companionObjectClass.getMethod("list", new Class[]{});
     Object result = listMethod.invoke(cObject, null);
-    return JavaConversions.asJavaList((Seq)result);
+    return JavaConversions.seqAsJavaList((Seq)result);
   }
 
   public ThriftType convertEnumTypeField(ThriftStructFieldInfo f) {

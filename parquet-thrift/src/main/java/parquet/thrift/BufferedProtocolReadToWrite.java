@@ -1,22 +1,27 @@
-/**
- * Copyright 2012 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/* 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package parquet.thrift;
 
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.*;
+
+import parquet.ParquetRuntimeException;
 import parquet.thrift.struct.ThriftField;
 import parquet.thrift.struct.ThriftType;
 import parquet.thrift.struct.ThriftType.ListType;
@@ -355,11 +360,28 @@ public class BufferedProtocolReadToWrite implements ProtocolPipe {
       final TField currentField = field;
       ThriftField expectedField;
       if ((expectedField = type.getChildById(field.id)) == null) {
-        notifyIgnoredFieldsOfRecord(field);
-        hasFieldsIgnored |= true;
-        //read the value and ignore it, NullProtocol will do nothing
-        new ProtocolReadToWrite().readOneValue(in, new NullProtocol(), field.type);
-        continue;
+
+        switch (type.getStructOrUnionType()) {
+          case STRUCT:
+            // this is an unrecognized field in a struct, not a union
+            notifyIgnoredFieldsOfRecord(field);
+            hasFieldsIgnored |= true;
+            //read the value and ignore it, NullProtocol will do nothing
+            new ProtocolReadToWrite().readOneValue(in, new NullProtocol(), field.type);
+            continue;
+          case UNION:
+            // this is a union with an unrecognized member -- this is fatal for this record
+            // in the write path, because it will be unreadable in the read path.
+            // throwing here means we will either skip this record entirely, or fail completely.
+            throw new DecodingSchemaMismatchException("Unrecognized union member with id: "
+                + field.id + " for struct:\n" + type);
+          case UNKNOWN:
+            // we should never reach here in the write path -- this only happens if the
+            // deprecated constructor of StructType is used, which should only be used in the
+            // read path.
+            throw new ParquetRuntimeException("This should never happen! "
+                + "Don't know if this field is a union, was the deprecated constructor of StructType used?\n" + type){};
+        }
       }
       buffer.add(new Action() {
         @Override

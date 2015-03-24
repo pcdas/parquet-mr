@@ -1,17 +1,20 @@
-/**
- * Copyright 2012 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/* 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package parquet.thrift;
 
@@ -19,12 +22,17 @@ import com.twitter.elephantbird.thrift.TStructDescriptor;
 import com.twitter.elephantbird.thrift.TStructDescriptor.Field;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TEnum;
-import parquet.schema.*;
+import org.apache.thrift.TUnion;
+
+import parquet.schema.MessageType;
 import parquet.thrift.projection.FieldProjectionFilter;
+import parquet.thrift.projection.PathGlobPattern;
+import parquet.thrift.projection.ThriftProjectionException;
 import parquet.thrift.struct.ThriftField;
 import parquet.thrift.struct.ThriftField.Requirement;
 import parquet.thrift.struct.ThriftType;
 import parquet.thrift.struct.ThriftType.*;
+import parquet.thrift.struct.ThriftType.StructType.StructOrUnionType;
 import parquet.thrift.struct.ThriftTypeID;
 
 import java.util.ArrayList;
@@ -38,6 +46,10 @@ import java.util.List;
 public class ThriftSchemaConverter {
 
   private final FieldProjectionFilter fieldProjectionFilter;
+
+  public static <T extends TBase<?,?>> StructOrUnionType structOrUnionType(Class<T> klass) {
+    return TUnion.class.isAssignableFrom(klass) ? StructOrUnionType.UNION : StructOrUnionType.STRUCT;
+  }
 
   public ThriftSchemaConverter() {
     this(new FieldProjectionFilter());
@@ -55,7 +67,15 @@ public class ThriftSchemaConverter {
     ThriftSchemaConvertVisitor visitor = new ThriftSchemaConvertVisitor(fieldProjectionFilter);
     thriftClass.accept(visitor);
     MessageType convertedMessageType = visitor.getConvertedMessageType();
+    checkUnmatchedProjectionFilter(visitor.getFieldProjectionFilter());
     return convertedMessageType;
+  }
+
+  private void checkUnmatchedProjectionFilter(FieldProjectionFilter filter) {
+    List<PathGlobPattern> unmatched = filter.getUnMatchedPatterns();
+    if (unmatched.size() != 0) {
+      throw new ThriftProjectionException("unmatched projection filters: " + unmatched.toString());
+    }
   }
 
   public ThriftType.StructType toStructType(Class<? extends TBase<?, ?>> thriftClass) {
@@ -80,7 +100,7 @@ public class ThriftSchemaConverter {
                         Requirement.fromType(field.getFieldMetaData().requirementType);
         children.add(toThriftField(field.getName(), field, req));
       }
-      return new StructType(children);
+      return new StructType(children, structOrUnionType(struct.getThriftClass()));
     }
 
     private ThriftField toThriftField(String name, Field field, ThriftField.Requirement requirement) {

@@ -1,3 +1,22 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 namespace java parquet.thrift.test.compat
 struct StructV1 {
   1: required string name
@@ -95,4 +114,37 @@ struct ListStructV1{
 
 struct ListStructV2{
   1: required list<StructV2> list1
+}
+
+struct AString {
+  1: required string s
+}
+
+struct ALong {
+  1: required i64 l
+}
+
+struct ABool {
+  1: required bool b
+}
+
+union UnionV1 {
+  1: AString aString,
+  2: ALong aLong
+}
+
+union UnionV2 {
+  1: AString aString,
+  2: ALong aLong,
+  3: ABool aNewBool
+}
+
+struct StructWithUnionV1 {  
+  1: required string name,
+  2: required UnionV1 aUnion
+}
+
+struct StructWithUnionV2 {  
+  1: required string name,
+  2: required UnionV2 aUnion
 }

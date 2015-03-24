@@ -1,17 +1,20 @@
-/**
- * Copyright 2012 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/* 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package parquet.hadoop;
 
@@ -65,6 +68,12 @@ public class ParquetFileWriter {
   public static final String PARQUET_COMMON_METADATA_FILE = "_common_metadata";
   public static final byte[] MAGIC = "PAR1".getBytes(Charset.forName("ASCII"));
   public static final int CURRENT_VERSION = 1;
+
+  // File creation modes
+  public static enum Mode {
+    CREATE,
+    OVERWRITE
+  }
 
   private static final ParquetMetadataConverter metadataConverter = new ParquetMetadataConverter();
 
@@ -141,17 +150,30 @@ public class ParquetFileWriter {
   private STATE state = STATE.NOT_STARTED;
 
   /**
-   *
+   * @param configuration Hadoop configuration
    * @param schema the schema of the data
-   * @param out the file to write to
-   * @param codec the codec to use to compress blocks
+   * @param file the file to write to
    * @throws IOException if the file can not be created
    */
-  public ParquetFileWriter(Configuration configuration, MessageType schema, Path file) throws IOException {
+  public ParquetFileWriter(Configuration configuration, MessageType schema,
+      Path file) throws IOException {
+    this(configuration, schema, file, Mode.CREATE);
+  }
+
+  /**
+   * @param configuration Hadoop configuration
+   * @param schema the schema of the data
+   * @param file the file to write to
+   * @param mode file creation mode
+   * @throws IOException if the file can not be created
+   */
+  public ParquetFileWriter(Configuration configuration, MessageType schema,
+      Path file, Mode mode) throws IOException {
     super();
     this.schema = schema;
     FileSystem fs = file.getFileSystem(configuration);
-    this.out = fs.create(file, false);
+    boolean overwriteFlag = (mode == Mode.OVERWRITE);
+    this.out = fs.create(file, overwriteFlag);
   }
 
   /**
@@ -412,22 +434,22 @@ public class ParquetFileWriter {
     metadata.close();
   }
 
-  private static ParquetMetadata mergeFooters(Path root, List<Footer> footers) {
-    String rootPath = root.toString();
+  static ParquetMetadata mergeFooters(Path root, List<Footer> footers) {
+    String rootPath = root.toUri().getPath();
     GlobalMetaData fileMetaData = null;
     List<BlockMetaData> blocks = new ArrayList<BlockMetaData>();
     for (Footer footer : footers) {
-      String path = footer.getFile().toString();
-      if (!path.startsWith(rootPath)) {
-        throw new ParquetEncodingException(path + " invalid: all the files must be contained in the root " + root);
+        String footerPath = footer.getFile().toUri().getPath();
+      if (!footerPath.startsWith(rootPath)) {
+        throw new ParquetEncodingException(footerPath + " invalid: all the files must be contained in the root " + root);
       }
-      path = path.substring(rootPath.length());
-      while (path.startsWith("/")) {
-        path = path.substring(1);
+      footerPath = footerPath.substring(rootPath.length());
+      while (footerPath.startsWith("/")) {
+        footerPath = footerPath.substring(1);
       }
       fileMetaData = mergeInto(footer.getParquetMetadata().getFileMetaData(), fileMetaData);
       for (BlockMetaData block : footer.getParquetMetadata().getBlocks()) {
-        block.setPath(path);
+        block.setPath(footerPath);
         blocks.add(block);
       }
     }
