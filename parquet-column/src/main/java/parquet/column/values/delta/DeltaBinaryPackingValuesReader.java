@@ -72,10 +72,6 @@ public class DeltaBinaryPackingValuesReader extends ValuesReader {
     allocateValuesBuffer();
     bitWidths = new int[config.miniBlockNumInABlock];
 
-    // clear previous page values
-    this.valuesBuffered = 0;
-    this.valuesRead = 0;
-
     //read first value from header
     valuesBuffer[valuesBuffered++] = BytesUtils.readZigZagVarInt(in);
 

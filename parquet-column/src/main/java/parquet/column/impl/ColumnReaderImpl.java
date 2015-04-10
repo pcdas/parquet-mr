@@ -138,8 +138,6 @@ class ColumnReaderImpl implements ColumnReader {
   private IntIterator repetitionLevelColumn;
   private IntIterator definitionLevelColumn;
   protected ValuesReader dataColumn;
-  // to keep track if the current value reader is dictionary based or not
-  private boolean dataColumnDictionaryFlag;
 
   private int repetitionLevel;
   private int definitionLevel;
@@ -529,20 +527,14 @@ class ColumnReaderImpl implements ColumnReader {
   private void initDataReader(Encoding dataEncoding, byte[] bytes, int offset, int valueCount) {
     this.pageValueCount = valueCount;
     this.endOfPageValueCount = readValues + pageValueCount;
-    // reuse the dataColumn ValueReader to preserve its internal state.
-    // for a column, dictionary use could change from page to page.
-    if (this.dataColumn == null || this.dataColumnDictionaryFlag != dataEncoding.usesDictionary()) {
-      if (dataEncoding.usesDictionary()) {
-        if (dictionary == null) {
-          throw new ParquetDecodingException(
-                  "could not read page in col " + path + " as the dictionary was missing for encoding " + dataEncoding);
-        }
-        this.dataColumn = dataEncoding.getDictionaryBasedValuesReader(path, VALUES, dictionary);
-        this.dataColumnDictionaryFlag = true;
-      } else {
-        this.dataColumn = dataEncoding.getValuesReader(path, VALUES);
-        this.dataColumnDictionaryFlag = false;
+    if (dataEncoding.usesDictionary()) {
+      if (dictionary == null) {
+        throw new ParquetDecodingException(
+            "could not read page in col " + path + " as the dictionary was missing for encoding " + dataEncoding);
       }
+      this.dataColumn = dataEncoding.getDictionaryBasedValuesReader(path, VALUES, dictionary);
+    } else {
+      this.dataColumn = dataEncoding.getValuesReader(path, VALUES);
     }
     if (dataEncoding.usesDictionary() && converter.hasDictionarySupport()) {
       bindToDictionary(dictionary);
