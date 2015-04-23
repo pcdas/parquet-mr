@@ -35,7 +35,7 @@ import static parquet.Preconditions.checkNotNull;
 public class FilteringPrimitiveConverter extends PrimitiveConverter {
   private final PrimitiveConverter delegate;
   private final ValueInspector[] valueInspectors;
-  private Binding binding;
+//  private Binding binding;
 
   public FilteringPrimitiveConverter(PrimitiveConverter delegate, ValueInspector[] valueInspectors) {
     this.delegate = checkNotNull(delegate, "delegate");
@@ -44,7 +44,8 @@ public class FilteringPrimitiveConverter extends PrimitiveConverter {
 
   @Override
   public boolean hasDictionarySupport() {
-    return true;
+    // yes, only if delegate supports dictionary
+    return delegate.hasDictionarySupport();
   }
 
   @Override
@@ -57,7 +58,8 @@ public class FilteringPrimitiveConverter extends PrimitiveConverter {
       delegate.setDictionary(dictionary);
     }
 
-    binding = createBinding(dictionary);
+    //bind is not needed anymore, we have verified delegate supports dictionary
+//    binding = createBinding(dictionary);
   }
 
 
@@ -66,7 +68,9 @@ public class FilteringPrimitiveConverter extends PrimitiveConverter {
     for (ValueInspector valueInspector : valueInspectors) {
       valueInspector.updateFromDictionary(dictionaryId);
     }
-    binding.writeValue(dictionaryId);
+    //bypass bind, go directly to delegate
+//    binding.writeValue(dictionaryId);
+    delegate.addValueFromDictionary(dictionaryId);
   }
 
   @Override

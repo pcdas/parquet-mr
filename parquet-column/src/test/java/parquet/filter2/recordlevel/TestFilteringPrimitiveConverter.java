@@ -145,7 +145,8 @@ public class TestFilteringPrimitiveConverter {
         verify(primitiveConverter).addValueFromDictionary(DICT_INDEX);
     }
 
-    @Test public void callsTypeSpecificAddWhenDelegateDoesNotSupportDictionary() {
+    //Disabling the test, as the corresponding feature is disabled
+    public void callsTypeSpecificAddWhenDelegateDoesNotSupportDictionary() {
         when(primitiveConverter.hasDictionarySupport()).thenReturn(false);
 
         when(dictionary.getPrimitiveTypeName()).thenReturn(primitiveTypeName);
