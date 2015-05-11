@@ -57,6 +57,10 @@ abstract public class Binary implements Comparable<Binary>, Serializable {
 
   abstract int compareTo(byte[] bytes, int offset, int length);
 
+  abstract public boolean prefixMatch(Binary other, int prefixLength);
+
+  abstract boolean prefixMatch(byte[] value, int offset, int length, int prefixLength);
+
   abstract public ByteBuffer toByteBuffer();
 
   @Override
@@ -136,6 +140,17 @@ abstract public class Binary implements Comparable<Binary>, Serializable {
     }
 
     @Override
+    public boolean prefixMatch(Binary other, int prefixLength) {
+      return other.prefixMatch(value, offset, length, prefixLength);
+    }
+
+    @Override
+    boolean prefixMatch(byte[] other, int otherOffset, int otherLength, int prefixLength) {
+      return Binary.prefixMatch
+              (value, offset, length, other, otherOffset, otherLength, prefixLength);
+    }
+
+    @Override
     public ByteBuffer toByteBuffer() {
       return ByteBuffer.wrap(value, offset, length);
     }
@@ -212,6 +227,17 @@ abstract public class Binary implements Comparable<Binary>, Serializable {
     @Override
     int compareTo(byte[] other, int otherOffset, int otherLength) {
       return Binary.compareTwoByteArrays(value, 0, value.length, other, otherOffset, otherLength);
+    }
+
+    @Override
+    public boolean prefixMatch(Binary other, int prefixLength) {
+      return other.prefixMatch(value, 0, value.length, prefixLength);
+    }
+
+    @Override
+    boolean prefixMatch(byte[] other, int otherOffset, int otherLength, int prefixLength) {
+      return Binary.prefixMatch
+              (value, 0, value.length, other, otherOffset, otherLength, prefixLength);
     }
 
     @Override
@@ -313,6 +339,27 @@ abstract public class Binary implements Comparable<Binary>, Serializable {
     }
 
     @Override
+    public boolean prefixMatch(Binary other, int prefixLength) {
+      if (value.hasArray()) {
+        return other.prefixMatch(value.array(), value.arrayOffset() + value.position(),
+                value.arrayOffset() + value.remaining(), prefixLength);
+      }
+      byte[] bytes = getBytes();
+      return other.prefixMatch(bytes, 0, bytes.length, prefixLength);
+    }
+
+    @Override
+    boolean prefixMatch(byte[] other, int otherOffset, int otherLength, int prefixLength) {
+      if (value.hasArray()) {
+        return Binary.prefixMatch(value.array(), value.arrayOffset() + value.position(),
+                value.arrayOffset() + value.remaining(), other, otherOffset, otherLength, prefixLength);
+      }
+      byte[] bytes = getBytes();
+      return Binary.prefixMatch(bytes, 0, bytes.length, other, otherOffset, otherLength, prefixLength);
+    }
+
+
+    @Override
     public ByteBuffer toByteBuffer() {
       return value;
     }
@@ -386,6 +433,19 @@ abstract public class Binary implements Comparable<Binary>, Serializable {
     if (length1 != length2) return false;
     if (array1 == array2 && offset1 == offset2) return true;
     for (int i = 0; i < length1; i++) {
+      if (array1[i + offset1] != array2[i + offset2]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static final boolean prefixMatch(byte[] array1, int offset1, int length1, byte[] array2, int offset2, int length2, int prefixLength) {
+    if (prefixLength > length1 || prefixLength > length2) return false;
+    if (array1 == null && array2 == null) return true;
+    if (array1 == null || array2 == null) return false;
+    if (array1 == array2 && offset1 == offset2) return true;
+    for (int i = 0; i < prefixLength; i++) {
       if (array1[i + offset1] != array2[i + offset2]) {
         return false;
       }
