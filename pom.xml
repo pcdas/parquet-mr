@@ -9,7 +9,7 @@
 
   <groupId>com.twitter</groupId>
   <artifactId>parquet</artifactId>
-  <version>1.6.0rc8.02-INFA</version>
+  <version>1.6.0rc8.03-INFA</version>
   <packaging>pom</packaging>
 
   <name>Apache Parquet MR (Incubating)</name>
