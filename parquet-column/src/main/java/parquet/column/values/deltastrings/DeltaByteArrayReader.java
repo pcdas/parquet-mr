@@ -53,8 +53,11 @@ public class DeltaByteArrayReader extends ValuesReader {
 
   @Override
   public void skip() {
-    prefixLengthReader.skip();
-    suffixReader.skip();
+// Simply calling the following two is not sufficient since it does not update
+// 'previous', which is required by readBytes().
+//    prefixLengthReader.skip();
+//    suffixReader.skip();
+    readBytes(); // previous needs to be computed
   }
 
   @Override

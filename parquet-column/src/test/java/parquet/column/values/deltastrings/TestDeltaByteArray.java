@@ -81,4 +81,18 @@ public class TestDeltaByteArray {
     Assert.assertEquals(0, bin[1]);
     Assert.assertEquals(7, bin[2]);
   }
+
+  @Test
+  public void testSkipValues() throws IOException {
+    String[] values = {"parquet-mr", "parquet-for", "parquet-format"};
+    DeltaByteArrayWriter writer = new DeltaByteArrayWriter(64 * 1024, 64 * 1024);
+    ValuesReader reader = new DeltaByteArrayReader();
+
+    Utils.writeData(writer, values);
+    reader.initFromPage(values.length, writer.getBytes().toByteArray(), 0);
+
+    Assert.assertEquals(values[0], reader.readBytes().toStringUsingUTF8());
+    reader.skip();
+    Assert.assertEquals(values[2], reader.readBytes().toStringUsingUTF8());
+  }
 }
