@@ -38,7 +38,7 @@ class RecordReaderBatchImplementation<T> extends RecordReaderImplementation<T> {
 
   private final GroupConverter rootConverter;
   private final boolean isFlatRecord;
-  private final boolean hasBatchSupport;
+  private final boolean useBatchedRead;
 
   private int entriesInLastBatch = 0;
   private int indexOfLastEntryReturned = 0;
@@ -49,7 +49,11 @@ class RecordReaderBatchImplementation<T> extends RecordReaderImplementation<T> {
    * @param validating whether we should validate against the schema
    * @param columnStore where to read the column data from
    */
-  public RecordReaderBatchImplementation(MessageColumnIO root, RecordMaterializer<T> recordMaterializer, boolean validating, ColumnReadStoreImpl columnStore) {
+  public RecordReaderBatchImplementation(MessageColumnIO root,
+                                         RecordMaterializer<T> recordMaterializer,
+                                         boolean validating,
+                                         ColumnReadStoreImpl columnStore,
+                                         boolean useBatchedRead) {
     super(root, recordMaterializer, validating, columnStore);
     rootConverter = (GroupConverter)super.getRecordConsumer();
     // For a flat record, the read path for each value can be optimized. So,
@@ -77,7 +81,8 @@ class RecordReaderBatchImplementation<T> extends RecordReaderImplementation<T> {
         currentState = currentState.getNextState(0);
       } while (currentState != null);
     }
-    hasBatchSupport = result;
+    boolean hasBatchSupport = result;
+    this.useBatchedRead = useBatchedRead && hasBatchSupport;
   }
 
   private void skipFlatRead() {
@@ -166,7 +171,7 @@ class RecordReaderBatchImplementation<T> extends RecordReaderImplementation<T> {
    */
   @Override
   public T read() {
-    if (isFlatRecord && hasBatchSupport)
+    if (isFlatRecord && useBatchedRead)
       return flatReadFromBatch();
 
     return super.read();
@@ -177,7 +182,7 @@ class RecordReaderBatchImplementation<T> extends RecordReaderImplementation<T> {
    */
   @Override
   public void skip() {
-    if (isFlatRecord && hasBatchSupport)
+    if (isFlatRecord && useBatchedRead)
       skipFlatReadFromBatch();
     else
       skipNonBatchRecord();

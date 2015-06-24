@@ -61,7 +61,7 @@ import parquet.schema.PrimitiveType.PrimitiveTypeNameConverter;
  * @author Prakash Das
  *
  */
-class BatchColumnReaderImpl implements BatchColumnReader {
+public class BatchColumnReaderImpl implements BatchColumnReader {
   private static final Log LOG = Log.getLog(BatchColumnReaderImpl.class);
 
   /**

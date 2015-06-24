@@ -90,7 +90,7 @@ public class ParquetFileReader implements Closeable {
 
   public static String PARQUET_READ_PARALLELISM = "parquet.metadata.read.parallelism";
 
-  private static ParquetMetadataConverter converter = new ParquetMetadataConverter();
+  protected static ParquetMetadataConverter converter = new ParquetMetadataConverter();
 
   /**
    * for files provided, check if there's a summary file.
@@ -439,11 +439,11 @@ public class ParquetFileReader implements Closeable {
   }
 
   private final CodecFactory codecFactory;
-  private final List<BlockMetaData> blocks;
-  private final FSDataInputStream f;
+  protected final List<BlockMetaData> blocks;
+  protected final FSDataInputStream f;
   private final Path filePath;
-  private int currentBlock = 0;
-  private final Map<ColumnPath, ColumnDescriptor> paths = new HashMap<ColumnPath, ColumnDescriptor>();
+  protected int currentBlock = 0;
+  protected final Map<ColumnPath, ColumnDescriptor> paths = new HashMap<ColumnPath, ColumnDescriptor>();
 
   /**
    * @param f the Parquet file (will be opened for read in this constructor)
@@ -473,6 +473,12 @@ public class ParquetFileReader implements Closeable {
       return null;
     }
     BlockMetaData block = blocks.get(currentBlock);
+    PageReadStore pageReadStore = readRowGroupFromBlock(block, paths);
+    ++currentBlock;
+    return pageReadStore;
+  }
+
+  protected PageReadStore readRowGroupFromBlock(BlockMetaData block, Map<ColumnPath, ColumnDescriptor> paths) throws IOException {
     if (block.getRowCount() == 0) {
       throw new RuntimeException("Illegal row group of 0 rows");
     }
@@ -501,7 +507,6 @@ public class ParquetFileReader implements Closeable {
         columnChunkPageReadStore.addColumn(chunk.descriptor.col, chunk.readAllPages());
       }
     }
-    ++currentBlock;
     return columnChunkPageReadStore;
   }
 

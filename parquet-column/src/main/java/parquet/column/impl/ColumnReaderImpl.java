@@ -54,7 +54,7 @@ import parquet.schema.PrimitiveType.PrimitiveTypeNameConverter;
  * @author Julien Le Dem
  *
  */
-class ColumnReaderImpl implements ColumnReader {
+public class ColumnReaderImpl implements ColumnReader {
   private static final Log LOG = Log.getLog(ColumnReaderImpl.class);
 
   /**

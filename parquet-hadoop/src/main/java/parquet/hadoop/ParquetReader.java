@@ -51,7 +51,7 @@ public class ParquetReader<T> implements Closeable {
   private final Iterator<Footer> footersIterator;
   private final Filter filter;
 
-  private InternalParquetRecordReader<T> reader;
+  private IotasInternalRecordReader<T> reader;
 
   /**
    * @param file the file to read
@@ -152,7 +152,7 @@ public class ParquetReader<T> implements Closeable {
       List<BlockMetaData> filteredBlocks = RowGroupFilter.filterRowGroups(
           filter, blocks, fileSchema);
 
-      reader = new InternalParquetRecordReader<T>(readSupport, filter);
+      reader = new IotasInternalRecordReader<T>(readSupport, filter);
       reader.initialize(fileSchema,
           footer.getParquetMetadata().getFileMetaData().getKeyValueMetaData(),
           footer.getFile(), filteredBlocks, conf);

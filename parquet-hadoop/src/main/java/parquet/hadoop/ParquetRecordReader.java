@@ -64,7 +64,7 @@ import parquet.schema.MessageType;
 public class ParquetRecordReader<T> extends RecordReader<Void, T> {
 
   private static final Log LOG = Log.getLog(ParquetRecordReader.class);
-  private final InternalParquetRecordReader<T> internalReader;
+  private final IotasInternalRecordReader<T> internalReader;
 
   /**
    * @param readSupport Object which helps reads files of the given type, e.g. Thrift, Avro.
@@ -78,7 +78,7 @@ public class ParquetRecordReader<T> extends RecordReader<Void, T> {
    * @param filter for filtering individual records
    */
   public ParquetRecordReader(ReadSupport<T> readSupport, Filter filter) {
-    internalReader = new InternalParquetRecordReader<T>(readSupport, filter);
+    internalReader = new IotasInternalRecordReader<T>(readSupport, filter);
   }
 
   /**

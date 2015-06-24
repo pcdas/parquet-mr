@@ -42,8 +42,8 @@ class FilteredRecordReader<T> extends RecordReaderBatchImplementation<T> {
    * @param unboundFilter Filter records, pass in NULL_FILTER to leave unfiltered.
    */
   public FilteredRecordReader(MessageColumnIO root, RecordMaterializer<T> recordMaterializer, boolean validating,
-                              ColumnReadStoreImpl columnStore, UnboundRecordFilter unboundFilter, long recordCount) {
-    super(root, recordMaterializer, validating, columnStore);
+                              ColumnReadStoreImpl columnStore, UnboundRecordFilter unboundFilter, long recordCount, boolean useBatchedRead) {
+    super(root, recordMaterializer, validating, columnStore, useBatchedRead);
     this.recordCount = recordCount;
     if ( unboundFilter != null ) {
       recordFilter = unboundFilter.bind(getColumnReaders());

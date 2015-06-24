@@ -88,6 +88,13 @@ public class MessageColumnIO extends GroupColumnIO {
   public <T> RecordReader<T> getRecordReader(final PageReadStore columns,
                                              final RecordMaterializer<T> recordMaterializer,
                                              final Filter filter) {
+    return getRecordReader(columns, recordMaterializer, filter, false);
+  }
+
+  public <T> RecordReader<T> getRecordReader(final PageReadStore columns,
+                                             final RecordMaterializer<T> recordMaterializer,
+                                             final Filter filter,
+                                             final boolean useBatchedRead) {
     checkNotNull(columns, "columns");
     checkNotNull(recordMaterializer, "recordMaterializer");
     checkNotNull(filter, "filter");
@@ -113,7 +120,8 @@ public class MessageColumnIO extends GroupColumnIO {
             MessageColumnIO.this,
             filteringRecordMaterializer,
             validating,
-            new ColumnReadStoreImpl(columns, filteringRecordMaterializer.getRootConverter(), getType()));
+            new ColumnReadStoreImpl(columns, filteringRecordMaterializer.getRootConverter(), getType()),
+            useBatchedRead);
       }
 
       @Override
@@ -124,7 +132,8 @@ public class MessageColumnIO extends GroupColumnIO {
             validating,
             new ColumnReadStoreImpl(columns, recordMaterializer.getRootConverter(), getType()),
             unboundRecordFilterCompat.getUnboundRecordFilter(),
-            columns.getRowCount()
+            columns.getRowCount(),
+            useBatchedRead
         );
 
       }
@@ -135,7 +144,8 @@ public class MessageColumnIO extends GroupColumnIO {
             MessageColumnIO.this,
             recordMaterializer,
             validating,
-            new ColumnReadStoreImpl(columns, recordMaterializer.getRootConverter(), getType()));
+            new ColumnReadStoreImpl(columns, recordMaterializer.getRootConverter(), getType()),
+            useBatchedRead);
       }
     });
   }

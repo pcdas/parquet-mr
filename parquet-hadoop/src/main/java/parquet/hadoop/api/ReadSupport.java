@@ -18,6 +18,8 @@
  */
 package parquet.hadoop.api;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -112,12 +114,14 @@ abstract public class ReadSupport<T> {
   public static final class ReadContext {
     private final MessageType requestedSchema;
     private final Map<String, String> readSupportMetadata;
+    private final List<EmbeddedSchema> embeddedSchemaList;
+    private final boolean useBatchedRead;
 
     /**
      * @param requestedSchema the schema requested by the user. Can not be null.
      */
     public ReadContext(MessageType requestedSchema) {
-      this(requestedSchema, null);
+      this(requestedSchema, null, null, false);
     }
 
     /**
@@ -125,12 +129,27 @@ abstract public class ReadSupport<T> {
      * @param readSupportMetadata metadata specific to the ReadSupport implementation. Will be available in the prepareForRead phase.
      */
     public ReadContext(MessageType requestedSchema, Map<String, String> readSupportMetadata) {
+      this(requestedSchema, readSupportMetadata, null, false);
+    }
+
+    public ReadContext(MessageType requestedSchema,
+                       Map<String,String> readSupportMetadata,
+                       List<EmbeddedSchema> embeddedSchemaList) {
+      this(requestedSchema, readSupportMetadata, embeddedSchemaList, false);
+    }
+
+    public ReadContext(MessageType requestedSchema,
+                       Map<String,String> readSupportMetadata,
+                       List<EmbeddedSchema> embeddedSchemaList,
+                       boolean useBatchedRead) {
       super();
       if (requestedSchema == null) {
         throw new NullPointerException("requestedSchema");
       }
       this.requestedSchema = requestedSchema;
       this.readSupportMetadata = readSupportMetadata;
+      this.embeddedSchemaList = (embeddedSchemaList == null) ? Collections.EMPTY_LIST : embeddedSchemaList;
+      this.useBatchedRead = useBatchedRead;
     }
 
     /**
@@ -145,6 +164,48 @@ abstract public class ReadSupport<T> {
      */
     public Map<String, String> getReadSupportMetadata() {
       return readSupportMetadata;
+    }
+
+    /**
+     * @return Details of embedded tables that needs to be read.
+     */
+    public List<EmbeddedSchema> getEmbeddedSchemaList() {
+      return embeddedSchemaList;
+    }
+
+    /**
+     * @return returns true if parquet should be run in batched-read mode
+     */
+    public boolean useBatchedRead() {
+      return useBatchedRead;
+    }
+  }
+
+  /**
+   * Holds details about the embedded table, and enables the InternalParquetRecordReader to read up
+   * the embedded table.
+   */
+  public static final class EmbeddedSchema {
+    private final long footerPosition;
+    private final MessageType requestedSchema;
+
+    public EmbeddedSchema(long footerPosition, MessageType requestedSchema) {
+      this.footerPosition = footerPosition;
+      this.requestedSchema = requestedSchema;
+    }
+
+    /**
+     * @return File offset at which the parquet footer for the embedded table could be found.
+     */
+    public long getFooterPosition() {
+      return footerPosition;
+    }
+
+    /**
+     * @return Projection list to be used while reading the embedded table.
+     */
+    public MessageType getRequestedSchema() {
+      return requestedSchema;
     }
   }
 }

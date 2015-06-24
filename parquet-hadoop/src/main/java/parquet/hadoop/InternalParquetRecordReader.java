@@ -37,6 +37,7 @@ import parquet.filter2.compat.FilterCompat;
 import parquet.filter2.compat.FilterCompat.Filter;
 import parquet.hadoop.api.InitContext;
 import parquet.hadoop.api.ReadSupport;
+import parquet.hadoop.iotas.MultiSchemaParquetFileReader;
 import parquet.hadoop.metadata.BlockMetaData;
 import parquet.hadoop.util.counters.BenchmarkCounter;
 import parquet.io.ColumnIOFactory;
@@ -56,8 +57,10 @@ class InternalParquetRecordReader<T> {
   private static final Log LOG = Log.getLog(InternalParquetRecordReader.class);
 
   private final ColumnIOFactory columnIOFactory = new ColumnIOFactory();
-  private final Filter filter;
+  protected final Filter filter;
 
+  protected ReadSupport.ReadContext readContext;
+  protected boolean useBatchedRead = false;
   private MessageType requestedSchema;
   private MessageType fileSchema;
   private int columnCount;
@@ -69,7 +72,7 @@ class InternalParquetRecordReader<T> {
   private long total;
   private long current = 0;
   private int currentBlock = -1;
-  private ParquetFileReader reader;
+  protected MultiSchemaParquetFileReader reader;
   private parquet.io.RecordReader<T> recordReader;
   private boolean strictTypeChecking;
 
@@ -107,7 +110,10 @@ class InternalParquetRecordReader<T> {
     this(readSupport, FilterCompat.get(filter));
   }
 
-  private void checkRead() throws IOException {
+  /**
+   * returns true if the checkRead resulted in reading of new row group
+   */
+  protected boolean checkRead() throws IOException {
     if (current == totalCountLoadedSoFar) {
       if (current != 0) {
         totalTimeSpentProcessingRecords += (System.currentTimeMillis() - startedAssemblingCurrentBlockAt);
@@ -134,11 +140,13 @@ class InternalParquetRecordReader<T> {
       if (Log.INFO) LOG.info("block read in memory in " + timeSpentReading + " ms. row count = " + pages.getRowCount());
       if (Log.DEBUG) LOG.debug("initializing Record assembly with requested schema " + requestedSchema);
       MessageColumnIO columnIO = columnIOFactory.getColumnIO(requestedSchema, fileSchema, strictTypeChecking);
-      recordReader = columnIO.getRecordReader(pages, recordConverter, filter);
+      recordReader = columnIO.getRecordReader(pages, recordConverter, filter, useBatchedRead);
       startedAssemblingCurrentBlockAt = System.currentTimeMillis();
       totalCountLoadedSoFar += pages.getRowCount();
       ++ currentBlock;
+      return true;
     }
+    return false;
   }
 
   public void close() throws IOException {
@@ -173,7 +181,7 @@ class InternalParquetRecordReader<T> {
       Path file, List<BlockMetaData> blocks, Configuration configuration)
       throws IOException {
     // initialize a ReadContext for this file
-    ReadSupport.ReadContext readContext = readSupport.init(new InitContext(
+    this.readContext = readSupport.init(new InitContext(
         configuration, toSetMultiMap(fileMetadata), fileSchema));
     this.requestedSchema = readContext.getRequestedSchema();
     this.fileSchema = fileSchema;
@@ -183,7 +191,7 @@ class InternalParquetRecordReader<T> {
         configuration, fileMetadata, fileSchema, readContext);
     this.strictTypeChecking = configuration.getBoolean(STRICT_TYPE_CHECKING, true);
     List<ColumnDescriptor> columns = requestedSchema.getColumns();
-    reader = new ParquetFileReader(configuration, file, blocks, columns);
+    reader = new MultiSchemaParquetFileReader(configuration, file, blocks, columns);
     for (BlockMetaData block : blocks) {
       total += block.getRowCount();
     }

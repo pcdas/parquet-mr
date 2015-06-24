@@ -36,6 +36,7 @@ import parquet.column.page.PageReader;
 import parquet.column.statistics.BinaryStatistics;
 import parquet.column.statistics.LongStatistics;
 import parquet.format.Statistics;
+import parquet.hadoop.iotas.MultiSchemaParquetFileReader;
 import parquet.hadoop.metadata.*;
 import parquet.io.api.Binary;
 import parquet.schema.MessageType;
@@ -158,7 +159,7 @@ public class TestParquetFileWriter {
     assertEquals(expectedEncoding,readFooter.getBlocks().get(0).getColumns().get(0).getEncodings());
 
     { // read first block of col #1
-      ParquetFileReader r = new ParquetFileReader(configuration, path, Arrays.asList(readFooter.getBlocks().get(0)), Arrays.asList(schema.getColumnDescription(path1)));
+      ParquetFileReader r = new MultiSchemaParquetFileReader(configuration, path, Arrays.asList(readFooter.getBlocks().get(0)), Arrays.asList(schema.getColumnDescription(path1)));
       PageReadStore pages = r.readNextRowGroup();
       assertEquals(3, pages.getRowCount());
       validateContains(schema, pages, path1, 2, BytesInput.from(bytes1));
@@ -168,7 +169,7 @@ public class TestParquetFileWriter {
 
     { // read all blocks of col #1 and #2
 
-      ParquetFileReader r = new ParquetFileReader(configuration, path, readFooter.getBlocks(), Arrays.asList(schema.getColumnDescription(path1), schema.getColumnDescription(path2)));
+      ParquetFileReader r = new MultiSchemaParquetFileReader(configuration, path, readFooter.getBlocks(), Arrays.asList(schema.getColumnDescription(path1), schema.getColumnDescription(path2)));
 
       PageReadStore pages = r.readNextRowGroup();
       assertEquals(3, pages.getRowCount());
