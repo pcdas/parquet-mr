@@ -366,6 +366,7 @@
          </execution>
        </executions>
       </plugin>
+      <!--
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
@@ -382,7 +383,7 @@
             <exclude>**/*.parquet</exclude>
             <exclude>**/*.avro</exclude>
             <exclude>**/*.json</exclude>
-            <exclude>**/names.txt</exclude> <!-- parquet-cascading test data -->
+            <exclude>**/names.txt</exclude>
             <exclude>**/*.avsc</exclude>
             <exclude>**/*.iml</exclude>
             <exclude>**/*.log</exclude>
@@ -405,6 +406,7 @@
           </excludes>
         </configuration>
       </plugin>
+    -->
     </plugins>
   </build>
 
