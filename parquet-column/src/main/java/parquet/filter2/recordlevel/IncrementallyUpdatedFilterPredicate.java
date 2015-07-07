@@ -20,6 +20,7 @@ package parquet.filter2.recordlevel;
 
 import parquet.column.Dictionary;
 import parquet.io.api.Binary;
+import parquet.io.api.GroupConverter;
 
 import java.util.BitSet;
 
@@ -62,8 +63,6 @@ public interface IncrementallyUpdatedFilterPredicate {
     // package private constructor
     ValueInspector() { }
 
-    private boolean result = false;
-    private boolean isKnown = false;
     private BitSet dictionaryResults;
 
     /** Populates array of BitSet based on whether values pass filter */
@@ -82,8 +81,13 @@ public interface IncrementallyUpdatedFilterPredicate {
     /** Does the element in the dictionary pass the filter */
     abstract protected boolean evaluateFilterForDictionaryElement(Dictionary dictionary, int dictionaryId);
 
+    private boolean[] results = new boolean[GroupConverter.ROW_BATCH_SIZE];
+    private boolean[] isKnowns = new boolean[GroupConverter.ROW_BATCH_SIZE];
 
-    // these methods signal what the value is
+    private int batchReadIndex = 0;
+    private int batchWriteIndex = 0;
+
+      // these methods signal what the value is
     public void updateNull() { throw new UnsupportedOperationException(); }
     public void update(int value) { throw new UnsupportedOperationException(); }
     public void update(long value) { throw new UnsupportedOperationException(); }
@@ -96,37 +100,59 @@ public interface IncrementallyUpdatedFilterPredicate {
      * Reset to clear state and begin evaluating the next record.
      */
     public final void reset() {
-      isKnown = false;
-      result = false;
+      isKnowns[batchReadIndex] = false;
+      ++batchReadIndex;
+      if (batchReadIndex >= batchWriteIndex) {
+        batchReadIndex = 0;
+        batchWriteIndex = 0;
+      }
+    }
+
+    public final boolean isInitialState() {
+      return (batchReadIndex == 0) && (batchWriteIndex == 0) && !isKnowns[0];
+    }
+
+    public final void resetBatch() {
+      while (!isInitialState()) reset();
     }
 
     /**
      * Subclasses should call this method to signal that the result of this predicate is known.
      */
     protected final void setResult(boolean result) {
-      if (isKnown) {
+      if (batchWriteIndex >= GroupConverter.ROW_BATCH_SIZE) {
+        throw new IndexOutOfBoundsException("setResult() called on a ValueInspector exceeding the rowbatch size");
+      }
+
+      if (isKnowns[batchWriteIndex]) {
         throw new IllegalStateException("setResult() called on a ValueInspector whose result is already known!"
           + " Did you forget to call reset()?");
       }
-      this.result = result;
-      this.isKnown = true;
+
+      this.results[batchWriteIndex] = result;
+      this.isKnowns[batchWriteIndex] = true;
+    }
+
+    public final void prepareToSetNextResult() {
+      ++batchWriteIndex;
     }
 
     /**
      * Should only be called if {@link #isKnown} return true.
      */
     public final boolean getResult() {
-      if (!isKnown) {
+      if (!isKnowns[batchReadIndex] || batchReadIndex > batchWriteIndex) {
         throw new IllegalStateException("getResult() called on a ValueInspector whose result is not yet known!");
       }
-      return result;
+      // expect a call to reset to move the batch read index
+      return results[batchReadIndex];
     }
 
     /**
      * Return true if this inspector has received a value yet, false otherwise.
      */
     public final boolean isKnown() {
-      return isKnown;
+      return isKnowns[batchReadIndex];
     }
 
     @Override

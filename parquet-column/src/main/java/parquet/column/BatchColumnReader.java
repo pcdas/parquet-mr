@@ -16,37 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package parquet.io;
+package parquet.column;
 
 
 /**
- * used to read reassembled records
- * @author Julien Le Dem
- *
- * @param <T> the type of the materialized record
+ * Reader for (repetition level, definition level, values) triplets of a column in a batch mode.
+ * This reader is used when the associated converter supports batch conversion of values.
+ * 
+ * @author Prakash Das
  */
-public abstract class RecordReader<T> {
-
+public interface BatchColumnReader extends ColumnReader {
   /**
-   * Reads one record and returns it.
-   * @return the materialized record
+   * writes the current batch of values to the converter
+   * 
+   * @param batchSize
+   *          the number of values in the batch, which should be less than or
+   *          equal to the number of values remaining in the current page.
+   * @return the number of values actually read into the batch, which is less
+   *         than or equal to input value batchSize
+   * @see #getRemainingPageValueCount()
    */
-  public abstract T read();
-
-  /**
-   * Skips the record that would have been read, equivalent to
-   * issuing read() but discarding the result assuming no side-effect
-   * of read() call. This can be more efficient in certain situations.
-   */
-  public void skip() {
-    read();
-  }
-
-  /**
-   * Returns whether the current record should be skipped (dropped)
-   * Will be called *after* read()
-   */
-  public boolean shouldSkipCurrentRecord() {
-    return false;
-  }
+  int writeCurrentBatchToConverter(int batchSize);
 }

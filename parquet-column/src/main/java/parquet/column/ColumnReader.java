@@ -51,6 +51,21 @@ public interface ColumnReader {
   void consume();
 
   /**
+   * @return the count of values including nulls yet to be read
+   */
+  long getRemainingValueCount();
+
+  /**
+   * @return the count of values including nulls yet to be read from the current page
+   */
+  int getRemainingPageValueCount();
+
+  /**
+   * @return true if the current value is null, false otherwise
+   */
+  boolean isValueNull();
+
+  /**
    * must return 0 when isFullyConsumed() == true
    * @return the repetition level for the current value
    */

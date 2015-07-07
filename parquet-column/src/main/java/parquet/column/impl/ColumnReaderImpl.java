@@ -617,6 +617,33 @@ class ColumnReaderImpl implements ColumnReader {
     return totalValueCount;
   }
 
+  /**
+   * {@inheritDoc}
+   * @see parquet.column.ColumnReader#getRemainingValueCount()
+   */
+  @Override
+  public long getRemainingValueCount() {
+    return (totalValueCount - readValues) + (valueRead ? 0 : 1);
+  }
+
+  /**
+   * {@inheritDoc}
+   * @see parquet.column.ColumnReader#getRemainingPageValueCount()
+   */
+  @Override
+  public int getRemainingPageValueCount() {
+    return (int)(endOfPageValueCount - readValues) + (valueRead ? 0 : 1);
+  }
+
+  /**
+   * {@inheritDoc}
+   * @see parquet.column.ColumnReader#isValueNull()
+   */
+  @Override
+  public boolean isValueNull() {
+    return definitionLevel < path.getMaxDefinitionLevel(); 
+  }
+
   static abstract class IntIterator {
     abstract int nextInt();
   }

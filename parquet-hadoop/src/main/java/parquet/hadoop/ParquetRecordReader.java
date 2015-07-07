@@ -117,6 +117,13 @@ public class ParquetRecordReader<T> extends RecordReader<Void, T> {
   }
 
   /**
+   * Returns 0 based position of the record that will be read next using nextKeyVal()
+   */
+  public long getCurrentPosition() {
+    return internalReader.getCurrentPosition();
+  }
+
+  /**
    * {@inheritDoc}
    */
   @Override
@@ -199,6 +206,10 @@ public class ParquetRecordReader<T> extends RecordReader<Void, T> {
   @Override
   public boolean nextKeyValue() throws IOException, InterruptedException {
     return internalReader.nextKeyValue();
+  }
+
+  public boolean skipNextKeyValue() throws IOException, InterruptedException {
+    return internalReader.skipNextKeyValue();
   }
 
   private ParquetInputSplit toParquetSplit(InputSplit split) throws IOException {

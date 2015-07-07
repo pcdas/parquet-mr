@@ -156,6 +156,14 @@ class InternalParquetRecordReader<T> {
     return currentValue;
   }
 
+
+  /**
+   * Returns 0 based position of the record that will be read next using nextKeyVal()
+   */
+  public long getCurrentPosition() {
+    return current;
+  }
+
   public float getProgress() throws IOException, InterruptedException {
     return (float) current / total;
   }
@@ -227,6 +235,19 @@ class InternalParquetRecordReader<T> {
       } catch (RuntimeException e) {
         throw new ParquetDecodingException(format("Can not read value at %d in block %d in file %s", current, currentBlock, file), e);
       }
+    }
+    return true;
+  }
+
+  public boolean skipNextKeyValue() throws IOException, InterruptedException {
+    // no more records left
+    if (current >= total) { return false; }
+    try {
+      checkRead();
+      recordReader.skip();
+      current ++;
+    } catch (RuntimeException e) {
+      throw new ParquetDecodingException(format("Can not skip value at %d in block %d in file %s", current, currentBlock, file), e);
     }
     return true;
   }

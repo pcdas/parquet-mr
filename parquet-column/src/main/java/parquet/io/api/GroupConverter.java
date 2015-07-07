@@ -27,6 +27,8 @@ package parquet.io.api;
  */
 abstract public class GroupConverter extends Converter {
 
+  public static int ROW_BATCH_SIZE = 200;
+
   @Override
   public boolean isPrimitive() {
     return false;
@@ -55,4 +57,15 @@ abstract public class GroupConverter extends Converter {
    */
   abstract public void end();
 
+  /**
+   * called at the beginning of the batched conversion of values if the
+   * these conditions are met: a) all are primitive converters b) all
+   * have batch support.
+   */
+  public void startBatch() {}
+  /**
+   * called at the end of batched conversion of values, if a startBatch()
+   * call was made.
+   */
+  public void endBatch() {}
 }

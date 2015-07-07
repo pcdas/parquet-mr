@@ -35,12 +35,46 @@ import static parquet.Preconditions.checkNotNull;
 public class FilteringPrimitiveConverter extends PrimitiveConverter {
   private final PrimitiveConverter delegate;
   private final ValueInspector[] valueInspectors;
+  private boolean[] nullFlags;
+  private int[] dictLookupVals;
+  private boolean[] boolVals;
+  private int[] intVals;
+  private long[] longVals;
+  private float[] floatVals;
+  private double[] doubleVals;
+  private Binary[] binaryVals;
+
+  private static abstract class EndOfBatchBinding {
+    abstract void endOfBatch(int filledBatchSize);
+  }
+  private EndOfBatchBinding batchBinding;
 //  private Binding binding;
 
   public FilteringPrimitiveConverter(PrimitiveConverter delegate, ValueInspector[] valueInspectors) {
     this.delegate = checkNotNull(delegate, "delegate");
     this.valueInspectors = checkNotNull(valueInspectors, "valueInspectors");
   }
+
+  @Override
+  public boolean hasBatchSupport() {
+    return delegate.hasBatchSupport();
+  }
+
+  @Override
+  public boolean[] getNullIndicatorBatchStore(int maxBatchSize) {
+    nullFlags = delegate.getNullIndicatorBatchStore(maxBatchSize);
+    return nullFlags;
+  }
+
+  @Override
+  public void startOfBatchOp() {
+    delegate.startOfBatchOp();
+  };
+
+  @Override
+  public void endOfBatchOp(int filledBatchSize) {
+    batchBinding.endOfBatch(filledBatchSize);
+  };
 
   @Override
   public boolean hasDictionarySupport() {
@@ -62,6 +96,11 @@ public class FilteringPrimitiveConverter extends PrimitiveConverter {
 //    binding = createBinding(dictionary);
   }
 
+  @Override
+  public int[] getDictLookupBatchStore(int maxBatchSize) {
+    dictLookupVals = delegate.getDictLookupBatchStore(maxBatchSize);
+    return dictLookupVals;
+  }
 
   @Override
   public void addValueFromDictionary(int dictionaryId) {
@@ -74,11 +113,47 @@ public class FilteringPrimitiveConverter extends PrimitiveConverter {
   }
 
   @Override
+  public void endOfDictBatchOp(int filledBatchSize) {
+    for (ValueInspector valueInspector : valueInspectors) {
+      valueInspector.resetBatch();
+      for (int i = 0; i < filledBatchSize; i++) {
+        if (!nullFlags[i])
+          valueInspector.updateFromDictionary(dictLookupVals[i]);
+        else
+          valueInspector.updateNull();
+        valueInspector.prepareToSetNextResult();
+      }
+    }
+    delegate.endOfDictBatchOp(filledBatchSize);
+  }
+
+  @Override
   public void addBinary(Binary value) {
     for (ValueInspector valueInspector : valueInspectors) {
       valueInspector.update(value);
     }
     delegate.addBinary(value);
+  }
+
+  @Override
+  public Binary[] getBinaryBatchStore(int maxBatchSize) {
+    binaryVals = delegate.getBinaryBatchStore(maxBatchSize);
+    batchBinding = new EndOfBatchBinding() {
+      void endOfBatch(int filledBatchSize) {
+        for (ValueInspector valueInspector : valueInspectors) {
+          valueInspector.resetBatch();
+          for (int i = 0; i < filledBatchSize; i++) {
+            if (!nullFlags[i])
+              valueInspector.update(binaryVals[i]);
+            else
+              valueInspector.updateNull();
+            valueInspector.prepareToSetNextResult();
+          }
+        }
+        delegate.endOfBatchOp(filledBatchSize);
+      }
+    };
+    return binaryVals;
   }
 
   @Override
@@ -90,11 +165,53 @@ public class FilteringPrimitiveConverter extends PrimitiveConverter {
   }
 
   @Override
+  public boolean[] getBooleanBatchStore(int maxBatchSize) {
+    boolVals = delegate.getBooleanBatchStore(maxBatchSize);
+    batchBinding = new EndOfBatchBinding() {
+      void endOfBatch(int filledBatchSize) {
+        for (ValueInspector valueInspector : valueInspectors) {
+          valueInspector.resetBatch();
+          for (int i = 0; i < filledBatchSize; i++) {
+            if (!nullFlags[i])
+              valueInspector.update(boolVals[i]);
+            else
+              valueInspector.updateNull();
+            valueInspector.prepareToSetNextResult();
+          }
+        }
+        delegate.endOfBatchOp(filledBatchSize);
+      }
+    };
+    return boolVals;
+  }
+
+  @Override
   public void addDouble(double value) {
     for (ValueInspector valueInspector : valueInspectors) {
       valueInspector.update(value);
     }
     delegate.addDouble(value);
+  }
+
+  @Override
+  public double[] getDoubleBatchStore(int maxBatchSize) {
+    doubleVals = delegate.getDoubleBatchStore(maxBatchSize);
+    batchBinding = new EndOfBatchBinding() {
+      void endOfBatch(int filledBatchSize) {
+        for (ValueInspector valueInspector : valueInspectors) {
+          valueInspector.resetBatch();
+          for (int i = 0; i < filledBatchSize; i++) {
+            if (!nullFlags[i])
+              valueInspector.update(doubleVals[i]);
+            else
+              valueInspector.updateNull();
+            valueInspector.prepareToSetNextResult();
+          }
+        }
+        delegate.endOfBatchOp(filledBatchSize);
+      }
+    };
+    return doubleVals;
   }
 
   @Override
@@ -106,6 +223,27 @@ public class FilteringPrimitiveConverter extends PrimitiveConverter {
   }
 
   @Override
+  public float[] getFloatBatchStore(int maxBatchSize) {
+    floatVals = delegate.getFloatBatchStore(maxBatchSize);
+    batchBinding = new EndOfBatchBinding() {
+      void endOfBatch(int filledBatchSize) {
+        for (ValueInspector valueInspector : valueInspectors) {
+          valueInspector.resetBatch();
+          for (int i = 0; i < filledBatchSize; i++) {
+            if (!nullFlags[i])
+              valueInspector.update(floatVals[i]);
+            else
+              valueInspector.updateNull();
+            valueInspector.prepareToSetNextResult();
+          }
+        }
+        delegate.endOfBatchOp(filledBatchSize);
+      }
+    };
+    return floatVals;
+  }
+
+  @Override
   public void addInt(int value) {
     for (ValueInspector valueInspector : valueInspectors) {
       valueInspector.update(value);
@@ -114,11 +252,54 @@ public class FilteringPrimitiveConverter extends PrimitiveConverter {
   }
 
   @Override
+  public int[] getIntBatchStore(int maxBatchSize) {
+    intVals = delegate.getIntBatchStore(maxBatchSize);
+    batchBinding = new EndOfBatchBinding() {
+      void endOfBatch(int filledBatchSize) {
+        for (ValueInspector valueInspector : valueInspectors) {
+          valueInspector.resetBatch();
+          for (int i = 0; i < filledBatchSize; i++) {
+            if (!nullFlags[i])
+              valueInspector.update(intVals[i]);
+            else
+              valueInspector.updateNull();
+            valueInspector.prepareToSetNextResult();
+          }
+        }
+        delegate.endOfBatchOp(filledBatchSize);
+      }
+    };
+    return intVals;
+  }
+
+  @Override
   public void addLong(long value) {
     for (ValueInspector valueInspector : valueInspectors) {
       valueInspector.update(value);
     }
     delegate.addLong(value);
+  }
+
+
+  @Override
+  public long[] getLongBatchStore(int maxBatchSize) {
+    longVals = delegate.getLongBatchStore(maxBatchSize);
+    batchBinding = new EndOfBatchBinding() {
+      void endOfBatch(int filledBatchSize) {
+        for (ValueInspector valueInspector : valueInspectors) {
+          valueInspector.resetBatch();
+          for (int i = 0; i < filledBatchSize; i++) {
+            if (!nullFlags[i])
+              valueInspector.update(longVals[i]);
+            else
+              valueInspector.updateNull();
+            valueInspector.prepareToSetNextResult();
+          }
+        }
+        delegate.endOfBatchOp(filledBatchSize);
+      }
+    };
+    return longVals;
   }
 
   /** Passes dictionary value to delegate, either using dictionary methods or add methods

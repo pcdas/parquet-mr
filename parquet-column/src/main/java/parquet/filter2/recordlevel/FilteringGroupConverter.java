@@ -112,4 +112,14 @@ public class FilteringGroupConverter extends GroupConverter {
   public void end() {
     delegate.end();
   }
+
+  @Override
+  public void startBatch() {
+      delegate.startBatch();
+  }
+
+  @Override
+  public void endBatch() {
+      delegate.endBatch();
+  }
 }
