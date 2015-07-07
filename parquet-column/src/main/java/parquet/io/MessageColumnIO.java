@@ -109,7 +109,7 @@ public class MessageColumnIO extends GroupColumnIO {
             builder.getValueInspectorsByColumn(),
             streamingPredicate);
 
-        return new RecordReaderImplementation<T>(
+        return new RecordReaderBatchImplementation<T>(
             MessageColumnIO.this,
             filteringRecordMaterializer,
             validating,
@@ -131,7 +131,7 @@ public class MessageColumnIO extends GroupColumnIO {
 
       @Override
       public RecordReader<T> visit(NoOpFilter noOpFilter) {
-        return new RecordReaderImplementation<T>(
+        return new RecordReaderBatchImplementation<T>(
             MessageColumnIO.this,
             recordMaterializer,
             validating,

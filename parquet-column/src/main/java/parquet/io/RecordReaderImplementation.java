@@ -237,7 +237,7 @@ class RecordReaderImplementation<T> extends RecordReader<T> {
   private State[] states;
   private ColumnReader[] columnReaders;
 
-  private boolean shouldSkipCurrentRecord = false;
+  protected boolean shouldSkipCurrentRecord = false;
 
   /**
    * @param root the root of the schema

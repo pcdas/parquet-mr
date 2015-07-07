@@ -29,7 +29,7 @@ import parquet.io.api.RecordMaterializer;
  * @author Jacob Metcalf
  *
  */
-class FilteredRecordReader<T> extends RecordReaderImplementation<T> {
+class FilteredRecordReader<T> extends RecordReaderBatchImplementation<T> {
 
   private final RecordFilter recordFilter;
   private final long recordCount;
