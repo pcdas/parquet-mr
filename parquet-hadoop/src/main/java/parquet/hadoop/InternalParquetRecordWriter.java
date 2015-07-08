@@ -48,22 +48,22 @@ class InternalParquetRecordWriter<T> {
   private static final int MINIMUM_RECORD_COUNT_FOR_CHECK = 100;
   private static final int MAXIMUM_RECORD_COUNT_FOR_CHECK = 10000;
 
-  private final ParquetFileWriter parquetFileWriter;
-  private final WriteSupport<T> writeSupport;
+  protected final ParquetFileWriter parquetFileWriter;
+  protected final WriteSupport<T> writeSupport;
   private final MessageType schema;
-  private final Map<String, String> extraMetaData;
+  protected final Map<String, String> extraMetaData = new HashMap<String, String>();
   private final long rowGroupSize;
-  private long rowGroupSizeThreshold;
+  protected long rowGroupSizeThreshold;
   private final int pageSize;
   private final BytesCompressor compressor;
   private final boolean validating;
   private final ParquetProperties parquetProperties;
 
-  private long recordCount = 0;
+  protected long recordCount = 0;
   private long recordCountForNextMemCheck = MINIMUM_RECORD_COUNT_FOR_CHECK;
 
-  private ColumnWriteStore columnStore;
-  private ColumnChunkPageWriteStore pageStore;
+  protected ColumnWriteStore columnStore;
+  protected ColumnChunkPageWriteStore pageStore;
 
 
   /**
@@ -89,7 +89,7 @@ class InternalParquetRecordWriter<T> {
     this.parquetFileWriter = parquetFileWriter;
     this.writeSupport = checkNotNull(writeSupport, "writeSupport");
     this.schema = schema;
-    this.extraMetaData = extraMetaData;
+    this.extraMetaData.putAll(extraMetaData);
     this.rowGroupSize = rowGroupSize;
     this.rowGroupSizeThreshold = rowGroupSize;
     this.pageSize = pageSize;
@@ -142,7 +142,7 @@ class InternalParquetRecordWriter<T> {
     }
   }
 
-  private void flushRowGroupToStore()
+  protected void flushRowGroupToStore()
       throws IOException {
     LOG.info(format("Flushing mem columnStore to file. allocated memory: %,d", columnStore.getAllocatedSize()));
     if (columnStore.getAllocatedSize() > 3 * (long)rowGroupSizeThreshold) {

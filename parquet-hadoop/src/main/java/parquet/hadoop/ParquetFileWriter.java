@@ -78,10 +78,10 @@ public class ParquetFileWriter {
   private static final ParquetMetadataConverter metadataConverter = new ParquetMetadataConverter();
 
   private final MessageType schema;
-  private final FSDataOutputStream out;
-  private BlockMetaData currentBlock;
+  protected final FSDataOutputStream out;
+  protected BlockMetaData currentBlock;
   private ColumnChunkMetaData currentColumn;
-  private long currentRecordCount;
+  protected long currentRecordCount;
   private List<BlockMetaData> blocks = new ArrayList<BlockMetaData>();
   private long uncompressedLength;
   private long compressedLength;
@@ -147,7 +147,7 @@ public class ParquetFileWriter {
     }
   }
 
-  private STATE state = STATE.NOT_STARTED;
+  protected STATE state = STATE.NOT_STARTED;
 
   /**
    * @param configuration Hadoop configuration
@@ -386,6 +386,14 @@ public class ParquetFileWriter {
     currentBlock = null;
   }
 
+  protected void setStateEndBlock() throws IOException {
+    state = state.endBlock();
+  }
+
+  protected boolean isStateStarted() {
+    return state == STATE.STARTED;
+  }
+
   /**
    * ends a file once all blocks have been written.
    * closes the file.
@@ -400,7 +408,7 @@ public class ParquetFileWriter {
     out.close();
   }
 
-  private static void serializeFooter(ParquetMetadata footer, FSDataOutputStream out) throws IOException {
+  protected static void serializeFooter(ParquetMetadata footer, FSDataOutputStream out) throws IOException {
     long footerIndex = out.getPos();
     parquet.format.FileMetaData parquetMetadata = new ParquetMetadataConverter().toParquetMetadata(CURRENT_VERSION, footer);
     writeFileMetaData(parquetMetadata, out);
