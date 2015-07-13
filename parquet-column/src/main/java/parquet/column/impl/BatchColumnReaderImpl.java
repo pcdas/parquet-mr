@@ -504,8 +504,7 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
    */
   @Override
   public void writeCurrentValueToConverter() {
-    readValue();
-    this.binding.writeValue();
+    throw new UnsupportedOperationException(getClass().getName());
   }
 
   /**
@@ -636,7 +635,6 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
   private void readNextBatch(int batchSize) {
     try {
       binding.readNextBatch(batchSize);
-      readPageIfRequired();
     } catch (RuntimeException e) {
       format("Cauld not read a batch of values for column %s", path.getPath().toString(), e);
     }
@@ -664,10 +662,12 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
     throw new UnsupportedOperationException(getClass().getName());
   }
 
+  /**
+   * Note: Also implicitly triggers a page read whenever necessary.
+   */
   private void accountForSkippedValues() {
-    if (skipCount == 0) return;
-    honorBatchRead = false;
-    do {
+    while (skipCount > 0) {
+      honorBatchRead = false;
       // consume the current page fully (logically)
       int toBeConsumed = (int)(endOfPageValueCount - readValues); // safe cast
       if (toBeConsumed > skipCount) {
@@ -684,8 +684,9 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
         // read the next page to discard remaining skipCount, if any.
         readPageIfRequired();
       }
-    } while (skipCount > 0);
+    }
     assert(skipCount == 0);
+    readPageIfRequired();
   }
 
   private void readDefinitionLevelOnly() {
