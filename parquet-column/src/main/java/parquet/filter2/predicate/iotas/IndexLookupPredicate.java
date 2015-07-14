@@ -1,6 +1,7 @@
-package parquet.filter2.predicate.userdefined;
+package parquet.filter2.predicate.iotas;
 
 import parquet.common.schema.ColumnPath;
+import parquet.filter2.predicate.userdefined.EmbeddedTableDataConsumer;
 import parquet.schema.MessageType;
 
 /**

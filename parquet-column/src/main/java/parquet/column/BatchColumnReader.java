@@ -37,4 +37,9 @@ public interface BatchColumnReader extends ColumnReader {
    * @see #getRemainingPageValueCount()
    */
   int writeCurrentBatchToConverter(int batchSize);
+
+  /**
+   * @return the maximum batch size supported by the reader
+   */
+  int getMaxBatchSize();
 }

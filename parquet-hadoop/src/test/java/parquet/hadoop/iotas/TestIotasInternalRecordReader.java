@@ -9,7 +9,7 @@ import parquet.example.data.Group;
 import parquet.example.data.simple.SimpleGroupFactory;
 import parquet.filter2.compat.FilterCompat;
 import parquet.filter2.predicate.*;
-import parquet.filter2.predicate.userdefined.IndexLookupPredicate;
+import parquet.filter2.predicate.iotas.IndexLookupPredicate;
 import parquet.hadoop.ParquetFileReader;
 import parquet.hadoop.ParquetReader;
 import parquet.hadoop.ParquetWriter;

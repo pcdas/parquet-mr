@@ -12,11 +12,12 @@ import parquet.column.ColumnDescriptor;
 import parquet.column.ColumnReader;
 import parquet.column.ParquetProperties;
 import parquet.column.iotas.EmbeddedTableColumnReaderFactory;
+import parquet.column.impl.ColumnReaderBatchingWrapper;
 import parquet.example.data.Group;
 import parquet.example.data.simple.SimpleGroupFactory;
 import parquet.filter2.compat.FilterCompat;
 import parquet.filter2.predicate.*;
-import parquet.filter2.predicate.userdefined.IndexLookupPredicate;
+import parquet.filter2.predicate.iotas.IndexLookupPredicate;
 import parquet.hadoop.ParquetReader;
 import parquet.hadoop.ParquetWriter;
 import parquet.hadoop.api.InitContext;
@@ -87,7 +88,8 @@ public class TestParquetEmbeddedTableFileReader {
         String[] colPath = {"doc_id"};
         ColumnDescriptor c = new ColumnDescriptor(colPath, PrimitiveType.PrimitiveTypeName.INT32, 0, 0);
         ColumnReader columnReader = factoryCaptor.getValue().getColumnReader("test", c);
-        assert(columnReader instanceof BatchColumnReader);
+        assert(columnReader instanceof ColumnReaderBatchingWrapper);
+        assert(((ColumnReaderBatchingWrapper) columnReader).getWrappedBatchColumnReader() instanceof BatchColumnReader);
     }
 
     private Path writeFile() throws IOException {

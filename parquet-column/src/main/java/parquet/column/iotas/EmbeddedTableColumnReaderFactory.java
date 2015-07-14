@@ -3,6 +3,7 @@ package parquet.column.iotas;
 import parquet.column.ColumnDescriptor;
 import parquet.column.ColumnReader;
 import parquet.column.impl.BatchColumnReaderImpl;
+import parquet.column.impl.ColumnReaderBatchingWrapper;
 import parquet.column.impl.ColumnReaderImpl;
 import parquet.column.page.PageReader;
 import parquet.io.api.Binary;
@@ -32,7 +33,7 @@ public class EmbeddedTableColumnReaderFactory {
     public ColumnReader getColumnReader(String schema, ColumnDescriptor column) {
         PageReader pageReader = this.pageReadStore.getPageReader(schema, column);
         if (useBatchedRead) {
-            return new BatchColumnReaderImpl(column, pageReader, NOOP_CONVERTER);
+            return new ColumnReaderBatchingWrapper(new BatchColumnReaderImpl(column, pageReader));
         } else {
             return new ColumnReaderImpl(column, pageReader, NOOP_CONVERTER);
         }
@@ -42,69 +43,7 @@ public class EmbeddedTableColumnReaderFactory {
      * NoOp primitive converter. This is never expected to be used for consuming values, and any
      * column reader using this converter is supposed to be used via the ColumnReader interface -
      * that is, the values should be read directly, and not via a converter.
-     *
-     * Implements storage so that it works with with BatchedColumnReader
      */
     private static class NoOpPrimitiveConverter extends PrimitiveConverter {
-
-        @Override
-        public boolean hasBatchSupport() {
-            return true;
-        }
-
-        @Override
-        public boolean[] getNullIndicatorBatchStore(int maxBatchSize) {
-            return new boolean[maxBatchSize];
-        }
-
-        @Override
-        public boolean[] getBooleanBatchStore(int maxBatchSize) {
-            return new boolean[maxBatchSize];
-        }
-
-        @Override
-        public int[] getIntBatchStore(int maxBatchSize) {
-            return new int[maxBatchSize];
-        }
-
-        @Override
-        public long[] getLongBatchStore(int maxBatchSize) {
-            return new long[maxBatchSize];
-        }
-
-        @Override
-        public float[] getFloatBatchStore(int maxBatchSize) {
-            return new float[maxBatchSize];
-        }
-
-        @Override
-        public double[] getDoubleBatchStore(int maxBatchSize) {
-            return new double[maxBatchSize];
-        }
-
-        @Override
-        public Binary[] getBinaryBatchStore(int maxBatchSize) {
-            return new Binary[maxBatchSize];
-        }
-
-        @Override
-        public int[] getDictLookupBatchStore(int maxBatchSize) {
-            return new int[maxBatchSize];
-        }
-
-        @Override
-        public void startOfBatchOp() {
-
-        }
-
-        @Override
-        public void endOfBatchOp(int filledBatchSize) {
-
-        }
-
-        @Override
-        public void endOfDictBatchOp(int filledBatchSize) {
-
-        }
     }
 }

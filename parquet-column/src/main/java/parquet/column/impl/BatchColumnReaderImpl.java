@@ -458,59 +458,6 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
     }
   }
 
-  private static class DefaultBatchPrimitiveConverter extends PrimitiveConverter {
-    @Override
-    public boolean hasBatchSupport() {
-        return true;
-    }
-
-    @Override
-    public boolean[] getNullIndicatorBatchStore(int maxBatchSize) {
-        return new boolean[maxBatchSize];
-    }
-
-    @Override
-    public boolean[] getBooleanBatchStore(int maxBatchSize) {
-        return new boolean[maxBatchSize];
-    }
-
-    @Override
-    public int[] getIntBatchStore(int maxBatchSize) {
-        return new int[maxBatchSize];
-    }
-
-    @Override
-    public long[] getLongBatchStore(int maxBatchSize) {
-        return new long[maxBatchSize];
-    }
-
-    @Override
-    public float[] getFloatBatchStore(int maxBatchSize) {
-        return new float[maxBatchSize];
-    }
-
-    @Override
-    public double[] getDoubleBatchStore(int maxBatchSize) {
-        return new double[maxBatchSize];
-    }
-
-    @Override
-    public Binary[] getBinaryBatchStore(int maxBatchSize) {
-        return new Binary[maxBatchSize];
-    }
-
-    @Override
-    public int[] getDictLookupBatchStore(int maxBatchSize) {
-        return new int[maxBatchSize];
-    }
-
-    @Override
-    public void startOfBatchOp() {}
-
-    @Override
-    public void endOfBatchOp(int filledBatchSize) {}
-  }
-
   /**
    * creates a reader for triplets with a no-op internal converter. The batch of
    * values are available through one of getter methods that is applicable to
@@ -595,6 +542,11 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
       converter.endOfBatchOp(batchSize);
     honorBatchRead = true;
     return batchSize;
+  }
+
+  @Override
+  public int getMaxBatchSize() {
+    return maxBatchSize;
   }
 
   @Override
