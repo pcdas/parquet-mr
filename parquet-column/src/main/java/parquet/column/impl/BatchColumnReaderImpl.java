@@ -517,7 +517,7 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
     accountForSkippedValues();
     int pageValuesRemaining = (int) (endOfPageValueCount - readValues + 1);
     checkArgument(batchSize <= pageValuesRemaining,
-        "trying to read %d values out of %d remaining values in current page",
+        "trying to read %s values out of %s remaining values in current page",
         batchSize, pageValuesRemaining);
     converter.startOfBatchOp();
     // Binding to converter may change when a column switches from dictionary
