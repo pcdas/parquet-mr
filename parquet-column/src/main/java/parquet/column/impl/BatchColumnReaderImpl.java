@@ -458,10 +458,77 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
     }
   }
 
+  private static class DefaultBatchPrimitiveConverter extends PrimitiveConverter {
+    @Override
+    public boolean hasBatchSupport() {
+        return true;
+    }
+
+    @Override
+    public boolean[] getNullIndicatorBatchStore(int maxBatchSize) {
+        return new boolean[maxBatchSize];
+    }
+
+    @Override
+    public boolean[] getBooleanBatchStore(int maxBatchSize) {
+        return new boolean[maxBatchSize];
+    }
+
+    @Override
+    public int[] getIntBatchStore(int maxBatchSize) {
+        return new int[maxBatchSize];
+    }
+
+    @Override
+    public long[] getLongBatchStore(int maxBatchSize) {
+        return new long[maxBatchSize];
+    }
+
+    @Override
+    public float[] getFloatBatchStore(int maxBatchSize) {
+        return new float[maxBatchSize];
+    }
+
+    @Override
+    public double[] getDoubleBatchStore(int maxBatchSize) {
+        return new double[maxBatchSize];
+    }
+
+    @Override
+    public Binary[] getBinaryBatchStore(int maxBatchSize) {
+        return new Binary[maxBatchSize];
+    }
+
+    @Override
+    public int[] getDictLookupBatchStore(int maxBatchSize) {
+        return new int[maxBatchSize];
+    }
+
+    @Override
+    public void startOfBatchOp() {}
+
+    @Override
+    public void endOfBatchOp(int filledBatchSize) {}
+  }
+
+  /**
+   * creates a reader for triplets with a no-op internal converter. The batch of
+   * values are available through one of getter methods that is applicable to
+   * this column.
+   * 
+   * @param path the descriptor for the corresponding column
+   * @param pageReader the underlying store to read from
+   */
+  public BatchColumnReaderImpl(ColumnDescriptor path, PageReader pageReader) {
+    this(path, pageReader, new DefaultBatchPrimitiveConverter());
+  }
+
   /**
    * creates a reader for triplets
    * @param path the descriptor for the corresponding column
    * @param pageReader the underlying store to read from
+   * @param converter a converter that can handle batch operations including
+   * the provisioning of the storage for a batch of primitive values
    */
   public BatchColumnReaderImpl(ColumnDescriptor path, PageReader pageReader, PrimitiveConverter converter) {
     this.path = checkNotNull(path, "path");

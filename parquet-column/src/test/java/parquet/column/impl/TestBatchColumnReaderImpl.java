@@ -43,8 +43,42 @@ import parquet.schema.MessageType;
 import parquet.schema.MessageTypeParser;
 
 public class TestBatchColumnReaderImpl {
+  MessageType schema;
+  ColumnDescriptor col;
+  MemPageWriter pageWriter;
+  ColumnWriterV2 columnWriterV2;
+  MemPageReader pageReader;
 
   private int rows = 13001;
+
+  private void reset() {
+    schema = null;
+    col = null;
+    pageWriter = null;
+    columnWriterV2 = null;
+    pageReader = null;
+  }
+
+  private void setupPageWrite(String schemaDesc) {
+    schema = MessageTypeParser.parseMessageType(schemaDesc);
+    col = schema.getColumns().get(0);
+    pageWriter = new MemPageWriter();
+    columnWriterV2 = new ColumnWriterV2(
+        col, pageWriter, new ParquetProperties(1024, PARQUET_2_0, true), 2048);
+  }
+
+  private void setupPageRead() {
+    List<DataPage> pages = pageWriter.getPages();
+    int valueCount = 0;
+    int rowCount = 0;
+    for (DataPage dataPage : pages) {
+      valueCount += dataPage.getValueCount();
+      rowCount += ((DataPageV2)dataPage).getRowCount();
+    }
+    assertEquals(rows, rowCount);
+    assertEquals(rows, valueCount);
+    pageReader = new MemPageReader((long)rows, pages.iterator(), pageWriter.getDictionaryPage());
+  }
 
   private static final class BatchConverter extends PrimitiveConverter {
     int count;
@@ -130,11 +164,8 @@ public class TestBatchColumnReaderImpl {
 
   @Test
   public void test() {
-    MessageType schema = MessageTypeParser.parseMessageType("message test { required binary foo; }");
-    ColumnDescriptor col = schema.getColumns().get(0);
-    MemPageWriter pageWriter = new MemPageWriter();
-    ColumnWriterV2 columnWriterV2 = new ColumnWriterV2(
-        col, pageWriter, new ParquetProperties(1024, PARQUET_2_0, true), 2048);
+    reset();
+    setupPageWrite("message test { required binary foo; }");
     for (int i = 0; i < rows; i++) {
       columnWriterV2.write(Binary.fromString("bar" + i % 10), 0, 0);
       if ((i + 1) % 1000 == 0) {
@@ -143,18 +174,13 @@ public class TestBatchColumnReaderImpl {
     }
     columnWriterV2.writePage(rows);
     columnWriterV2.finalizeColumnChunk();
-    List<DataPage> pages = pageWriter.getPages();
-    int valueCount = 0;
-    int rowCount = 0;
-    for (DataPage dataPage : pages) {
-      valueCount += dataPage.getValueCount();
-      rowCount += ((DataPageV2)dataPage).getRowCount();
-    }
-    assertEquals(rows, rowCount);
-    assertEquals(rows, valueCount);
-    MemPageReader pageReader = new MemPageReader((long)rows, pages.iterator(), pageWriter.getDictionaryPage());
+
+    BatchColumnReader colReader;
+
+    // test with a converter
+    setupPageRead();
     BatchConverter converter = new BatchConverter();
-    BatchColumnReader colReader = new BatchColumnReaderImpl(col, pageReader, converter);
+    colReader = new BatchColumnReaderImpl(col, pageReader, converter);
     for (int i = 0; i < rows;) {
       int batchSize = Math.min(colReader.getRemainingPageValueCount(), ROW_BATCH_SIZE);
       int filledSize = colReader.writeCurrentBatchToConverter(batchSize);
@@ -167,16 +193,29 @@ public class TestBatchColumnReaderImpl {
       }
     }
     assertEquals(rows, converter.count);
+
+    // test without a converter
+    setupPageRead();
+    colReader = new BatchColumnReaderImpl(col, pageReader);
+    for (int i = 0; i < rows;) {
+      int batchSize = Math.min(colReader.getRemainingPageValueCount(), ROW_BATCH_SIZE);
+      int filledSize = colReader.writeCurrentBatchToConverter(batchSize);
+      for (int j = 0; j < filledSize; ++j, ++i) {
+        assertFalse(colReader.isValueNull());
+        String expectedVal = "bar" + i % 10;
+        assertEquals(expectedVal, colReader.getBinary().toStringUsingUTF8());
+        colReader.consume();
+      }
+    }
+
   }
 
   @Test
   public void testOptional() {
+    reset();
+    setupPageWrite("message test { optional binary foo; }");
+
     final int DICT_ENTRY_COUNT = 32;
-    MessageType schema = MessageTypeParser.parseMessageType("message test { optional binary foo; }");
-    ColumnDescriptor col = schema.getColumns().get(0);
-    MemPageWriter pageWriter = new MemPageWriter();
-    ColumnWriterV2 columnWriterV2 = new ColumnWriterV2(
-        col, pageWriter, new ParquetProperties(1024, PARQUET_2_0, true), 2048);
     for (int i = 0; i < rows; i++) {
       if (i % 2 == 0)
         columnWriterV2.write(Binary.fromString("bar" + i % DICT_ENTRY_COUNT), 0, 1);
@@ -188,18 +227,13 @@ public class TestBatchColumnReaderImpl {
     }
     columnWriterV2.writePage(rows);
     columnWriterV2.finalizeColumnChunk();
-    List<DataPage> pages = pageWriter.getPages();
-    int valueCount = 0;
-    int rowCount = 0;
-    for (DataPage dataPage : pages) {
-      valueCount += dataPage.getValueCount();
-      rowCount += ((DataPageV2)dataPage).getRowCount();
-    }
-    assertEquals(rows, rowCount);
-    assertEquals(rows, valueCount);
-    MemPageReader pageReader = new MemPageReader((long)rows, pages.iterator(), pageWriter.getDictionaryPage());
+
+    BatchColumnReader colReader;
+
+    // test with a converter
+    setupPageRead();
     BatchConverter converter = new BatchConverter();
-    BatchColumnReader colReader = new BatchColumnReaderImpl(col, pageReader, converter);
+    colReader = new BatchColumnReaderImpl(col, pageReader, converter);
     for (int i = 0; i < rows;) {
       int batchSize = Math.min(colReader.getRemainingPageValueCount(), ROW_BATCH_SIZE);
       int filledSize = colReader.writeCurrentBatchToConverter(batchSize);
@@ -216,17 +250,33 @@ public class TestBatchColumnReaderImpl {
       }
     }
     assertEquals(rows, converter.count);
+
+    // test without a converter
+    setupPageRead();
+    colReader = new BatchColumnReaderImpl(col, pageReader);
+    for (int i = 0; i < rows;) {
+      int batchSize = Math.min(colReader.getRemainingPageValueCount(), ROW_BATCH_SIZE);
+      int filledSize = colReader.writeCurrentBatchToConverter(batchSize);
+      for (int j = 0; j < filledSize; ++j, ++i) {
+        if (i % 2 == 0) {
+          String expectedVal = "bar" + i % DICT_ENTRY_COUNT;
+          assertEquals(expectedVal, colReader.getBinary().toStringUsingUTF8());
+        } else {
+          assertTrue(colReader.isValueNull());
+        }
+        colReader.consume();
+      }
+    }
+
   }
 
   @Test
   public void testDictToNonDictSwitch() {
+    reset();
+    setupPageWrite("message test { required binary foo; }");
+
     final int DICT_ENTRY_COUNT1 = 32;
     final int DICT_ENTRY_COUNT2 = 256;
-    MessageType schema = MessageTypeParser.parseMessageType("message test { required binary foo; }");
-    ColumnDescriptor col = schema.getColumns().get(0);
-    MemPageWriter pageWriter = new MemPageWriter();
-    ColumnWriterV2 columnWriterV2 = new ColumnWriterV2(
-        col, pageWriter, new ParquetProperties(1024, PARQUET_2_0, true), 2048);
     final int pageRowCount = 1000;
     for (int i = 0; i < pageRowCount; ++i) {
       columnWriterV2.write(Binary.fromString("bar" + i % DICT_ENTRY_COUNT1), 0, 0);
@@ -242,18 +292,13 @@ public class TestBatchColumnReaderImpl {
     }
     columnWriterV2.writePage(rows);
     columnWriterV2.finalizeColumnChunk();
-    List<DataPage> pages = pageWriter.getPages();
-    int valueCount = 0;
-    int rowCount = 0;
-    for (DataPage dataPage : pages) {
-      valueCount += dataPage.getValueCount();
-      rowCount += ((DataPageV2)dataPage).getRowCount();
-    }
-    assertEquals(rows, rowCount);
-    assertEquals(rows, valueCount);
-    MemPageReader pageReader = new MemPageReader((long)rows, pages.iterator(), pageWriter.getDictionaryPage());
+
+    BatchColumnReader colReader;
+
+    // test with a converter
+    setupPageRead();
     BatchConverter converter = new BatchConverter();
-    BatchColumnReader colReader = new BatchColumnReaderImpl(col, pageReader, converter);
+    colReader = new BatchColumnReaderImpl(col, pageReader, converter);
     for (int i = 0; i < rows;) {
       int batchSize = Math.min(colReader.getRemainingPageValueCount(), ROW_BATCH_SIZE);
       int filledSize = colReader.writeCurrentBatchToConverter(batchSize);
@@ -271,5 +316,24 @@ public class TestBatchColumnReaderImpl {
       }
     }
     assertEquals(rows, converter.count);
+
+    // test without a converter
+    setupPageRead();
+    colReader = new BatchColumnReaderImpl(col, pageReader);
+    for (int i = 0; i < rows;) {
+      int batchSize = Math.min(colReader.getRemainingPageValueCount(), ROW_BATCH_SIZE);
+      int filledSize = colReader.writeCurrentBatchToConverter(batchSize);
+      for (int j = 0; j < filledSize; ++j, ++i) {
+        assertFalse(colReader.isValueNull());
+        String expectedVal;
+        if (i < pageRowCount)
+          expectedVal = "bar" + i % DICT_ENTRY_COUNT1;
+        else
+          expectedVal = "bar" + i % DICT_ENTRY_COUNT2;
+        String colValue = colReader.getBinary().toStringUsingUTF8();
+        assertEquals(expectedVal, colValue);
+        colReader.consume();
+      }
+    }
   }
 }
