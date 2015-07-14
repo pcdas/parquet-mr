@@ -176,7 +176,6 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
 
   private final PrimitiveConverter converter;
   private BatchBinding binding;
-  private BatchBinding prevBinding; // see writeCurrentBatchToConverter()
 
   private void bindToDictionary(final Dictionary dictionary) {
 
@@ -519,16 +518,11 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
         "trying to read %s values out of %s remaining values in current page",
         batchSize, pageValuesRemaining);
     converter.startOfBatchOp();
-    // Binding to converter may change when a column switches from dictionary
-    // encoding to non-dictionary encoding at a page boundary. This is also
-    // the reason for the above check to keep implementation simple for the
-    // converters & the subsequent access of converted values.
-    prevBinding = binding;
     readIndex = 0;
     if (!honorBatchRead) batchSize = 1;
     readNextBatch(batchSize);
     filledBatchSize = batchSize;
-    if (prevBinding.isUsingDictionary())
+    if (binding.isUsingDictionary())
       converter.endOfDictBatchOp(batchSize);
     else
       converter.endOfBatchOp(batchSize);
@@ -539,7 +533,7 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
   @Override
   public int getCurrentValueDictionaryID() {
     readValue();
-    return prevBinding.getDictionaryId();
+    return binding.getDictionaryId();
   }
 
   /**
@@ -549,7 +543,7 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
   @Override
   public int getInteger() {
     readValue();
-    return this.prevBinding.getInteger();
+    return this.binding.getInteger();
   }
 
   /**
@@ -559,7 +553,7 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
   @Override
   public boolean getBoolean() {
     readValue();
-    return this.prevBinding.getBoolean();
+    return this.binding.getBoolean();
   }
 
   /**
@@ -569,7 +563,7 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
   @Override
   public long getLong() {
     readValue();
-    return this.prevBinding.getLong();
+    return this.binding.getLong();
   }
 
   /**
@@ -579,7 +573,7 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
   @Override
   public Binary getBinary() {
     readValue();
-    return this.prevBinding.getBinary();
+    return this.binding.getBinary();
   }
 
   /**
@@ -589,7 +583,7 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
   @Override
   public float getFloat() {
     readValue();
-    return this.prevBinding.getFloat();
+    return this.binding.getFloat();
   }
 
   /**
@@ -599,7 +593,7 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
   @Override
   public double getDouble() {
     readValue();
-    return this.prevBinding.getDouble();
+    return this.binding.getDouble();
   }
 
   /**
@@ -629,7 +623,7 @@ public class BatchColumnReaderImpl implements BatchColumnReader {
       throw new ParquetDecodingException(
           format("Batch is empty. Initiate a fill batch operation invoking writeCurrentBatchToConverter method"));
     }
-    prevBinding.read();
+    binding.read();
   }
 
   private void readNextBatch(int batchSize) {
