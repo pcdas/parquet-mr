@@ -56,7 +56,7 @@ import parquet.column.page.PageReader;
 import parquet.column.page.PageWriter;
 import parquet.column.statistics.BinaryStatistics;
 import parquet.column.statistics.Statistics;
-import parquet.hadoop.iotas.MultiSchemaParquetFileReader;
+import parquet.hadoop.iotas.ParquetEmbeddedTableFileReader;
 import parquet.hadoop.metadata.CompressionCodecName;
 import parquet.hadoop.metadata.ParquetMetadata;
 import parquet.schema.MessageType;
@@ -117,7 +117,7 @@ public class TestColumnChunkPageWriteStore {
 
     {
       ParquetMetadata footer = ParquetFileReader.readFooter(conf, file, NO_FILTER);
-      ParquetFileReader reader = new MultiSchemaParquetFileReader(conf, file, footer.getBlocks(), schema.getColumns());
+      ParquetFileReader reader = new ParquetEmbeddedTableFileReader(conf, file, footer.getBlocks(), schema.getColumns());
       PageReadStore rowGroup = reader.readNextRowGroup();
       PageReader pageReader = rowGroup.getPageReader(col);
       DataPageV2 page = (DataPageV2)pageReader.readPage();

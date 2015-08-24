@@ -3,13 +3,13 @@ package parquet.hadoop;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import parquet.column.iotas.FilterUtils;
-import parquet.column.iotas.MultiSchemaColumnReaderFactory;
+import parquet.column.iotas.EmbeddedTableColumnReaderFactory;
 import parquet.filter.UnboundRecordFilter;
 import parquet.filter2.compat.FilterCompat;
 import parquet.filter2.predicate.FilterPredicate;
 import parquet.filter2.predicate.Operators;
 import parquet.filter2.predicate.UserDefinedPredicate;
-import parquet.filter2.predicate.userdefined.MultiSchemaConsumer;
+import parquet.filter2.predicate.userdefined.EmbeddedTableDataConsumer;
 import parquet.format.converter.ParquetMetadataConverter;
 import parquet.hadoop.api.ReadSupport;
 import parquet.hadoop.metadata.BlockMetaData;
@@ -72,14 +72,14 @@ class IotasInternalRecordReader<T> extends InternalParquetRecordReader<T>{
      * @throws IOException
      */
     private void initializeEmbeddedSchema(ReadSupport.ReadContext readContext) throws IOException {
-        for(ReadSupport.EmbeddedSchema embeddedSchema: readContext.getEmbeddedSchemaList()) {
-            long footerPosition = embeddedSchema.getFooterPosition();
+        for(ReadSupport.EmbeddedTableSchema embeddedTableSchema : readContext.getEmbeddedTableSchemaList()) {
+            long footerPosition = embeddedTableSchema.getFooterPosition();
             ParquetMetadata metadata = reader.readEmbeddedFooter(
                     footerPosition, ParquetMetadataConverter.NO_FILTER);
             MessageType indexSchema = metadata.getFileMetaData().getSchema();
             reader.addEmbeddedSchema(indexSchema.getName(),
                     metadata.getBlocks(),
-                    embeddedSchema.getRequestedSchema().getColumns());
+                    embeddedTableSchema.getRequestedSchema().getColumns());
         }
     }
 
@@ -94,8 +94,8 @@ class IotasInternalRecordReader<T> extends InternalParquetRecordReader<T>{
                 if (predicate instanceof Operators.UserDefined) {
                     UserDefinedPredicate udp = ((Operators.UserDefined) predicate)
                             .getUserDefinedPredicate();
-                    if (udp instanceof MultiSchemaConsumer) {
-                        ((MultiSchemaConsumer) udp).init(new MultiSchemaColumnReaderFactory(
+                    if (udp instanceof EmbeddedTableDataConsumer) {
+                        ((EmbeddedTableDataConsumer) udp).init(new EmbeddedTableColumnReaderFactory(
                                 reader.getCurrentPageReadStore(),
                                 useBatchedRead));
                     }

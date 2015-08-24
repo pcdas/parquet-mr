@@ -23,7 +23,7 @@ import static parquet.column.Encoding.PLAIN;
 /**
  * Created by abennett on 8/7/15.
  */
-public class TestMultiSchemaColumnReaderFactory {
+public class TestEmbeddedTableColumnReaderFactory {
 
     @Test
     public void test() throws IOException {
@@ -37,9 +37,9 @@ public class TestMultiSchemaColumnReaderFactory {
 
         PageReadStore embeddedPageReadStore = mock(PageReadStore.class);
         when(embeddedPageReadStore.getPageReader(col)).thenReturn(pageReader);
-        MultiSchemaPageReadStore pageReadStore = new MultiSchemaPageReadStore(mock(PageReadStore.class));
+        EmbeddedTablePageReadStore pageReadStore = new EmbeddedTablePageReadStore(mock(PageReadStore.class));
         pageReadStore.addPageReadStore("test", embeddedPageReadStore);
-        MultiSchemaColumnReaderFactory factory = new MultiSchemaColumnReaderFactory(pageReadStore, false);
+        EmbeddedTableColumnReaderFactory factory = new EmbeddedTableColumnReaderFactory(pageReadStore, false);
         ColumnReader reader = factory.getColumnReader("test", col);
 
         assertNotNull(reader);

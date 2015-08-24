@@ -11,14 +11,14 @@ import parquet.io.api.PrimitiveConverter;
 /**
  * Created by abennett on 24/6/15.
  */
-public class MultiSchemaColumnReaderFactory {
+public class EmbeddedTableColumnReaderFactory {
 
-    private final MultiSchemaPageReadStore pageReadStore;
+    private final EmbeddedTablePageReadStore pageReadStore;
     private final boolean useBatchedRead;
     private static final PrimitiveConverter NOOP_CONVERTER = new NoOpPrimitiveConverter();
 
-    public MultiSchemaColumnReaderFactory(MultiSchemaPageReadStore pageReadStore,
-                                          boolean useBatchedRead) {
+    public EmbeddedTableColumnReaderFactory(EmbeddedTablePageReadStore pageReadStore,
+                                            boolean useBatchedRead) {
         this.pageReadStore = pageReadStore;
         this.useBatchedRead = useBatchedRead;
     }

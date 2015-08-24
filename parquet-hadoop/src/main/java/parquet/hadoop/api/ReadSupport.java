@@ -114,7 +114,7 @@ abstract public class ReadSupport<T> {
   public static final class ReadContext {
     private final MessageType requestedSchema;
     private final Map<String, String> readSupportMetadata;
-    private final List<EmbeddedSchema> embeddedSchemaList;
+    private final List<EmbeddedTableSchema> embeddedTableSchemaList;
     private final boolean useBatchedRead;
 
     /**
@@ -134,13 +134,13 @@ abstract public class ReadSupport<T> {
 
     public ReadContext(MessageType requestedSchema,
                        Map<String,String> readSupportMetadata,
-                       List<EmbeddedSchema> embeddedSchemaList) {
-      this(requestedSchema, readSupportMetadata, embeddedSchemaList, false);
+                       List<EmbeddedTableSchema> embeddedTableSchemaList) {
+      this(requestedSchema, readSupportMetadata, embeddedTableSchemaList, false);
     }
 
     public ReadContext(MessageType requestedSchema,
                        Map<String,String> readSupportMetadata,
-                       List<EmbeddedSchema> embeddedSchemaList,
+                       List<EmbeddedTableSchema> embeddedTableSchemaList,
                        boolean useBatchedRead) {
       super();
       if (requestedSchema == null) {
@@ -148,7 +148,7 @@ abstract public class ReadSupport<T> {
       }
       this.requestedSchema = requestedSchema;
       this.readSupportMetadata = readSupportMetadata;
-      this.embeddedSchemaList = (embeddedSchemaList == null) ? Collections.EMPTY_LIST : embeddedSchemaList;
+      this.embeddedTableSchemaList = (embeddedTableSchemaList == null) ? Collections.EMPTY_LIST : embeddedTableSchemaList;
       this.useBatchedRead = useBatchedRead;
     }
 
@@ -169,8 +169,8 @@ abstract public class ReadSupport<T> {
     /**
      * @return Details of embedded tables that needs to be read.
      */
-    public List<EmbeddedSchema> getEmbeddedSchemaList() {
-      return embeddedSchemaList;
+    public List<EmbeddedTableSchema> getEmbeddedTableSchemaList() {
+      return embeddedTableSchemaList;
     }
 
     /**
@@ -185,11 +185,11 @@ abstract public class ReadSupport<T> {
    * Holds details about the embedded table, and enables the InternalParquetRecordReader to read up
    * the embedded table.
    */
-  public static final class EmbeddedSchema {
+  public static final class EmbeddedTableSchema {
     private final long footerPosition;
     private final MessageType requestedSchema;
 
-    public EmbeddedSchema(long footerPosition, MessageType requestedSchema) {
+    public EmbeddedTableSchema(long footerPosition, MessageType requestedSchema) {
       this.footerPosition = footerPosition;
       this.requestedSchema = requestedSchema;
     }

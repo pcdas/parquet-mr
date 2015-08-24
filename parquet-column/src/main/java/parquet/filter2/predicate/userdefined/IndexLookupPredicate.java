@@ -14,7 +14,7 @@ import parquet.schema.MessageType;
  *
  * Created by abennett on 26/6/15.
  */
-public interface IndexLookupPredicate extends MultiSchemaConsumer{
+public interface IndexLookupPredicate extends EmbeddedTableDataConsumer {
 
     /**
      * @return The type of index that the predicate needs for its functioning. The only index type

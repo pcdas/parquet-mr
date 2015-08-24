@@ -11,7 +11,7 @@ import static org.mockito.Mockito.*;
 /**
  * Created by abennett on 8/7/15.
  */
-public class TestMultiSchemaPageReadStore {
+public class TestEmbeddedTablePageReadStore {
 
     @Test
     public void testDelegation() {
@@ -20,7 +20,7 @@ public class TestMultiSchemaPageReadStore {
         PageReader pageReader = mock(PageReader.class);
         when(mainStore.getPageReader(column)).thenReturn(pageReader);
         when(mainStore.getRowCount()).thenReturn(10L);
-        MultiSchemaPageReadStore pageReadStore = new MultiSchemaPageReadStore(mainStore);
+        EmbeddedTablePageReadStore pageReadStore = new EmbeddedTablePageReadStore(mainStore);
         assertEquals(pageReadStore.getPageReader(column), pageReader);
         assertEquals(pageReadStore.getRowCount(), 10L);
     }
@@ -28,20 +28,20 @@ public class TestMultiSchemaPageReadStore {
     @Test(expected = NullPointerException.class)
     public void testAddNullSchema() {
         PageReadStore mainStore = mock(PageReadStore.class);
-        MultiSchemaPageReadStore pageReadStore = new MultiSchemaPageReadStore(mainStore);
+        EmbeddedTablePageReadStore pageReadStore = new EmbeddedTablePageReadStore(mainStore);
         pageReadStore.addPageReadStore(null, mock(PageReadStore.class));
     }
 
     @Test(expected = NullPointerException.class)
     public void testAddNullEmbeddedStore() {
         PageReadStore mainStore = mock(PageReadStore.class);
-        MultiSchemaPageReadStore pageReadStore = new MultiSchemaPageReadStore(mainStore);
+        EmbeddedTablePageReadStore pageReadStore = new EmbeddedTablePageReadStore(mainStore);
         pageReadStore.addPageReadStore("test", null);
     }
 
     @Test
     public void testEmbeddedStore() {
-        MultiSchemaPageReadStore pageReadStore = new MultiSchemaPageReadStore(mock(PageReadStore.class));
+        EmbeddedTablePageReadStore pageReadStore = new EmbeddedTablePageReadStore(mock(PageReadStore.class));
         PageReadStore embeddedStore = mock(PageReadStore.class);
         ColumnDescriptor column = mock(ColumnDescriptor.class);
         PageReader pageReader = mock(PageReader.class);

@@ -4,7 +4,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 import parquet.column.ParquetProperties;
-import parquet.column.iotas.MultiSchemaColumnReaderFactory;
+import parquet.column.iotas.EmbeddedTableColumnReaderFactory;
 import parquet.example.data.Group;
 import parquet.example.data.simple.SimpleGroupFactory;
 import parquet.filter2.compat.FilterCompat;
@@ -43,7 +43,7 @@ public class TestIotasInternalRecordReader {
         FilterPredicate predicate = FilterApi.userDefined(c1, testUDP);
 
         readFile(path, predicate, 10);
-        verify(testUDP).init(any(MultiSchemaColumnReaderFactory.class));
+        verify(testUDP).init(any(EmbeddedTableColumnReaderFactory.class));
     }
 
     @Test
@@ -67,8 +67,8 @@ public class TestIotasInternalRecordReader {
         FilterPredicate predicate = FilterApi.and(userDefinedPredicate1, userDefinedPredicate2);
 
         readFile(path, predicate, 10);
-        verify(testUDP1).init(any(MultiSchemaColumnReaderFactory.class));
-        verify(testUDP2).init(any(MultiSchemaColumnReaderFactory.class));
+        verify(testUDP1).init(any(EmbeddedTableColumnReaderFactory.class));
+        verify(testUDP2).init(any(EmbeddedTableColumnReaderFactory.class));
     }
 
     @Test
@@ -87,7 +87,7 @@ public class TestIotasInternalRecordReader {
         FilterPredicate predicate = FilterApi.userDefined(c1, testUDP);
 
         readFile(path, predicate, 10000);
-        verify(testUDP, times(numRowGroups)).init(any(MultiSchemaColumnReaderFactory.class));
+        verify(testUDP, times(numRowGroups)).init(any(EmbeddedTableColumnReaderFactory.class));
     }
 
     private Path createFile(int n) throws IOException {

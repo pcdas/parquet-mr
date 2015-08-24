@@ -15,12 +15,12 @@ import static parquet.Preconditions.checkNotNull;
  *
  * Created by abennett on 23/6/15.
  */
-public class MultiSchemaPageReadStore implements PageReadStore{
+public class EmbeddedTablePageReadStore implements PageReadStore{
 
     private final PageReadStore mainPageReadStore;
     private final Map<String, PageReadStore> embeddedPageReadStores;
 
-    public MultiSchemaPageReadStore(PageReadStore mainPageReadStore) {
+    public EmbeddedTablePageReadStore(PageReadStore mainPageReadStore) {
         this.mainPageReadStore = mainPageReadStore;
         this.embeddedPageReadStores = new HashMap<String, PageReadStore>();
     }

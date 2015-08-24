@@ -3,7 +3,7 @@ package parquet.hadoop.iotas;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import parquet.column.ColumnDescriptor;
-import parquet.column.iotas.MultiSchemaPageReadStore;
+import parquet.column.iotas.EmbeddedTablePageReadStore;
 import parquet.column.page.PageReadStore;
 import parquet.common.schema.ColumnPath;
 import parquet.format.converter.ParquetMetadataConverter;
@@ -20,14 +20,14 @@ import java.util.Map;
 /**
  * Created by abennett on 8/7/15.
  */
-public class MultiSchemaParquetFileReader extends ParquetFileReader{
+public class ParquetEmbeddedTableFileReader extends ParquetFileReader{
 
     private final List<String> embeddedSchemas;
     private final Map<String, List<BlockMetaData>> embeddedBlocks;
     private final Map<String, Map<ColumnPath, ColumnDescriptor>> embeddedColumnsMap;
-    private MultiSchemaPageReadStore currentPageReadStore;
+    private EmbeddedTablePageReadStore currentPageReadStore;
 
-    public MultiSchemaParquetFileReader(Configuration configuration, Path filePath, List<BlockMetaData> blocks, List<ColumnDescriptor> columns) throws IOException {
+    public ParquetEmbeddedTableFileReader(Configuration configuration, Path filePath, List<BlockMetaData> blocks, List<ColumnDescriptor> columns) throws IOException {
         super(configuration, filePath, blocks, columns);
         this.embeddedSchemas = new ArrayList<String>();
         this.embeddedBlocks = new HashMap<String, List<BlockMetaData>>();
@@ -45,13 +45,13 @@ public class MultiSchemaParquetFileReader extends ParquetFileReader{
     }
 
     @Override
-    public MultiSchemaPageReadStore readNextRowGroup() throws IOException {
+    public EmbeddedTablePageReadStore readNextRowGroup() throws IOException {
         if (currentBlock == blocks.size()) {
             return null;
         }
         BlockMetaData block = blocks.get(currentBlock);
         PageReadStore mainPageReadStore = readRowGroupFromBlock(block, paths);
-        MultiSchemaPageReadStore pageReadStore = new MultiSchemaPageReadStore(mainPageReadStore);
+        EmbeddedTablePageReadStore pageReadStore = new EmbeddedTablePageReadStore(mainPageReadStore);
         for (String schema: this.embeddedSchemas) {
             PageReadStore embeddedPageReadStore = readRowGroupFromBlock(
                     this.embeddedBlocks.get(schema).get(currentBlock),
@@ -63,7 +63,7 @@ public class MultiSchemaParquetFileReader extends ParquetFileReader{
         return pageReadStore;
     }
 
-    public MultiSchemaPageReadStore getCurrentPageReadStore() {
+    public EmbeddedTablePageReadStore getCurrentPageReadStore() {
         return this.currentPageReadStore;
     }
 

@@ -37,7 +37,7 @@ import parquet.filter2.compat.FilterCompat;
 import parquet.filter2.compat.FilterCompat.Filter;
 import parquet.hadoop.api.InitContext;
 import parquet.hadoop.api.ReadSupport;
-import parquet.hadoop.iotas.MultiSchemaParquetFileReader;
+import parquet.hadoop.iotas.ParquetEmbeddedTableFileReader;
 import parquet.hadoop.metadata.BlockMetaData;
 import parquet.hadoop.util.counters.BenchmarkCounter;
 import parquet.io.ColumnIOFactory;
@@ -72,7 +72,7 @@ class InternalParquetRecordReader<T> {
   private long total;
   private long current = 0;
   private int currentBlock = -1;
-  protected MultiSchemaParquetFileReader reader;
+  protected ParquetEmbeddedTableFileReader reader;
   private parquet.io.RecordReader<T> recordReader;
   private boolean strictTypeChecking;
 
@@ -191,7 +191,7 @@ class InternalParquetRecordReader<T> {
         configuration, fileMetadata, fileSchema, readContext);
     this.strictTypeChecking = configuration.getBoolean(STRICT_TYPE_CHECKING, true);
     List<ColumnDescriptor> columns = requestedSchema.getColumns();
-    reader = new MultiSchemaParquetFileReader(configuration, file, blocks, columns);
+    reader = new ParquetEmbeddedTableFileReader(configuration, file, blocks, columns);
     for (BlockMetaData block : blocks) {
       total += block.getRowCount();
     }

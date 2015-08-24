@@ -3,34 +3,25 @@ package parquet.hadoop;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
-import parquet.column.Encoding;
-import parquet.column.ParquetProperties;
 import parquet.example.data.Group;
 import parquet.example.data.simple.SimpleGroupFactory;
 import parquet.hadoop.api.InitContext;
 import parquet.hadoop.example.GroupReadSupport;
 import parquet.hadoop.example.GroupWriteSupport;
-import parquet.hadoop.iotas.MultiSchemaParquetFileReader;
-import parquet.hadoop.iotas.TestMultiSchemaParquetFileReader;
 import parquet.hadoop.metadata.*;
 import parquet.io.api.Binary;
 import parquet.schema.MessageType;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Arrays.asList;
 import static org.junit.Assert.*;
-import static parquet.column.Encoding.*;
-import static parquet.column.ParquetProperties.WriterVersion.PARQUET_1_0;
 import static parquet.column.ParquetProperties.WriterVersion.PARQUET_2_0;
 import static parquet.format.converter.ParquetMetadataConverter.NO_FILTER;
 import static parquet.hadoop.ParquetFileReader.readFooter;
 import static parquet.hadoop.TestUtils.enforceEmptyDir;
-import static parquet.hadoop.metadata.CompressionCodecName.UNCOMPRESSED;
 import static parquet.schema.MessageTypeParser.parseMessageType;
 
 public class ParquetEmbeddedTableWriterTest {
@@ -248,10 +239,10 @@ public class ParquetEmbeddedTableWriterTest {
     }
 
     protected ReadContext constructReadContext(ReadContext rc) {
-      EmbeddedSchema embeddedSchema = new EmbeddedSchema(footerLocation, rc.getRequestedSchema());
-      List<EmbeddedSchema> embeddedSchemaList = new ArrayList<EmbeddedSchema>();
-      embeddedSchemaList.add(embeddedSchema);
-      return new ReadContext(rc.getRequestedSchema(), rc.getReadSupportMetadata(), embeddedSchemaList);
+      EmbeddedTableSchema embeddedTableSchema = new EmbeddedTableSchema(footerLocation, rc.getRequestedSchema());
+      List<EmbeddedTableSchema> embeddedTableSchemaList = new ArrayList<EmbeddedTableSchema>();
+      embeddedTableSchemaList.add(embeddedTableSchema);
+      return new ReadContext(rc.getRequestedSchema(), rc.getReadSupportMetadata(), embeddedTableSchemaList);
     }
 
   }

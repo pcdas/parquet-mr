@@ -11,7 +11,7 @@ import parquet.column.BatchColumnReader;
 import parquet.column.ColumnDescriptor;
 import parquet.column.ColumnReader;
 import parquet.column.ParquetProperties;
-import parquet.column.iotas.MultiSchemaColumnReaderFactory;
+import parquet.column.iotas.EmbeddedTableColumnReaderFactory;
 import parquet.example.data.Group;
 import parquet.example.data.simple.SimpleGroupFactory;
 import parquet.filter2.compat.FilterCompat;
@@ -44,7 +44,7 @@ import static parquet.schema.MessageTypeParser.parseMessageType;
 /**
  * Created by abennett on 8/7/15.
  */
-public class TestMultiSchemaParquetFileReader {
+public class TestParquetEmbeddedTableFileReader {
 
     @Test
     public void test() throws IOException {
@@ -60,7 +60,7 @@ public class TestMultiSchemaParquetFileReader {
 
         readFile(path, predicate, footerLoc);
 
-        ArgumentCaptor<MultiSchemaColumnReaderFactory> factoryCaptor = ArgumentCaptor.forClass(MultiSchemaColumnReaderFactory.class);
+        ArgumentCaptor<EmbeddedTableColumnReaderFactory> factoryCaptor = ArgumentCaptor.forClass(EmbeddedTableColumnReaderFactory.class);
         verify(testUDP).init(factoryCaptor.capture());
         String[] colPath = {"doc_id"};
         ColumnDescriptor c = new ColumnDescriptor(colPath, PrimitiveType.PrimitiveTypeName.INT32, 0, 0);
@@ -82,7 +82,7 @@ public class TestMultiSchemaParquetFileReader {
 
         batchReadFile(path, predicate, footerLoc);
 
-        ArgumentCaptor<MultiSchemaColumnReaderFactory> factoryCaptor = ArgumentCaptor.forClass(MultiSchemaColumnReaderFactory.class);
+        ArgumentCaptor<EmbeddedTableColumnReaderFactory> factoryCaptor = ArgumentCaptor.forClass(EmbeddedTableColumnReaderFactory.class);
         verify(testUDP).init(factoryCaptor.capture());
         String[] colPath = {"doc_id"};
         ColumnDescriptor c = new ColumnDescriptor(colPath, PrimitiveType.PrimitiveTypeName.INT32, 0, 0);
@@ -176,10 +176,10 @@ public class TestMultiSchemaParquetFileReader {
         }
 
         protected ReadContext constructReadContext(ReadContext rc) {
-            EmbeddedSchema embeddedSchema = new EmbeddedSchema(footerLocation, rc.getRequestedSchema());
-            List<EmbeddedSchema> embeddedSchemaList = new ArrayList<EmbeddedSchema>();
-            embeddedSchemaList.add(embeddedSchema);
-            return new ReadContext(rc.getRequestedSchema(), rc.getReadSupportMetadata(), embeddedSchemaList);
+            EmbeddedTableSchema embeddedTableSchema = new EmbeddedTableSchema(footerLocation, rc.getRequestedSchema());
+            List<EmbeddedTableSchema> embeddedTableSchemaList = new ArrayList<EmbeddedTableSchema>();
+            embeddedTableSchemaList.add(embeddedTableSchema);
+            return new ReadContext(rc.getRequestedSchema(), rc.getReadSupportMetadata(), embeddedTableSchemaList);
         }
 
     }
@@ -194,7 +194,7 @@ public class TestMultiSchemaParquetFileReader {
         protected ReadContext constructReadContext(ReadContext rc) {
             ReadContext parent = super.constructReadContext(rc);
             return new ReadContext(parent.getRequestedSchema(), parent.getReadSupportMetadata(),
-                    parent.getEmbeddedSchemaList(), true);
+                    parent.getEmbeddedTableSchemaList(), true);
         }
     }
 
