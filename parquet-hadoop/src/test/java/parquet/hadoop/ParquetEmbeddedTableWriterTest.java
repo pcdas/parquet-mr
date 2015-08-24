@@ -2,7 +2,6 @@ package parquet.hadoop;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetApplicationsRequestPBImpl;
 import org.junit.Test;
 import parquet.column.Encoding;
 import parquet.column.ParquetProperties;
