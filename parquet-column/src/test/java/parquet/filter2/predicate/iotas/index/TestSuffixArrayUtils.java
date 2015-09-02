@@ -31,10 +31,12 @@ public class TestSuffixArrayUtils {
                 Binary.fromString("abc"),
                 Binary.fromString("base"),
                 Binary.fromString("abc"));
+        //will not assume that the column is sorted
         List<Long> pos = SuffixArrayUtils.findTermStartsWithPos(reader, "base");
-        assert(pos.size() == 2);
+        assert(pos.size() == 3);
         assertTrue(pos.contains(4L));
         assertTrue(pos.contains(5L));
+        assertTrue(pos.contains(8L));
     }
 
     @Test

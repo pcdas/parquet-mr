@@ -54,7 +54,7 @@ class IotasInternalRecordReader<T> extends InternalParquetRecordReader<T>{
         checkNotNull(readContext, "readContext");
         //set batch read flag
         super.useBatchedRead = readContext.useBatchedRead();
-        initializeEmbeddedSchema(readContext);
+        initializeEmbeddedSchema(readContext, fileMetadata);
     }
 
     @Override
@@ -71,9 +71,13 @@ class IotasInternalRecordReader<T> extends InternalParquetRecordReader<T>{
      * @param readContext
      * @throws IOException
      */
-    private void initializeEmbeddedSchema(ReadSupport.ReadContext readContext) throws IOException {
+    private void initializeEmbeddedSchema(ReadSupport.ReadContext readContext, Map<String, String> fileMetadata) throws IOException {
         for(ReadSupport.EmbeddedTableSchema embeddedTableSchema : readContext.getEmbeddedTableSchemaList()) {
             long footerPosition = embeddedTableSchema.getFooterPosition();
+            if (footerPosition == 0) {
+                String footerPositionKey = embeddedTableSchema.getFooterPositionKey();
+                footerPosition = Long.parseLong(fileMetadata.get(footerPositionKey));
+            }
             ParquetMetadata metadata = reader.readEmbeddedFooter(
                     footerPosition, ParquetMetadataConverter.NO_FILTER);
             MessageType indexSchema = metadata.getFileMetaData().getSchema();

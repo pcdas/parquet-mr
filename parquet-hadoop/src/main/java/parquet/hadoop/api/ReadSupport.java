@@ -187,10 +187,20 @@ abstract public class ReadSupport<T> {
    */
   public static final class EmbeddedTableSchema {
     private final long footerPosition;
+    private final String footerPositionKey;
     private final MessageType requestedSchema;
 
     public EmbeddedTableSchema(long footerPosition, MessageType requestedSchema) {
+      this(footerPosition, null, requestedSchema);
+    }
+
+    public EmbeddedTableSchema(String footerPositionKey, MessageType requestedSchema) {
+      this(0L, footerPositionKey, requestedSchema);
+    }
+
+    private EmbeddedTableSchema(long footerPosition, String footerPositionKey, MessageType requestedSchema) {
       this.footerPosition = footerPosition;
+      this.footerPositionKey = footerPositionKey;
       this.requestedSchema = requestedSchema;
     }
 
@@ -199,6 +209,14 @@ abstract public class ReadSupport<T> {
      */
     public long getFooterPosition() {
       return footerPosition;
+    }
+
+    /**
+     * @return Key to file metadata entry that contains
+     * the file offset at which the parquet footer for the embedded table could be found.
+     */
+    public String getFooterPositionKey() {
+      return footerPositionKey;
     }
 
     /**

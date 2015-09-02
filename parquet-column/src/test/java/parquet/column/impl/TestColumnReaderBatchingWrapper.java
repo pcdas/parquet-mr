@@ -17,6 +17,7 @@ public class TestColumnReaderBatchingWrapper {
         when(batchColumnReader.getMaxBatchSize()).thenReturn(5);
         when(batchColumnReader.getTotalValueCount()).thenReturn(12L);
         when(batchColumnReader.getInteger()).thenReturn(1);
+        when(batchColumnReader.getRemainingPageValueCount()).thenReturn(12, 7, 2);
         ColumnReader columnReader = new ColumnReaderBatchingWrapper(batchColumnReader);
 
         assert(columnReader.getTotalValueCount() == 12);

@@ -24,34 +24,30 @@ import static parquet.Preconditions.checkNotNull;
  */
 public class IndexContainsPredicate extends UserDefinedPredicate<Integer> implements IndexLookupPredicate, Serializable{
 
-    private final String indexName;
-    private final String indexSchema;
+    //TODO: revert it back to suffix-array
+    public static final String INDEX_NAME = "suffixArray";
+    private static final String INDEX_SCHEMA = "message TermIndexTable {" +
+            " required binary term (UTF8);" +
+            " required binary doc_ids; }";
     private final ColumnPath indexColumn;
     private final String term;
     private SortedIntQueue docIds;
     private final String indexTableName;
 
-    public IndexContainsPredicate(String columnName, String term) {
+    public IndexContainsPredicate(String indexTableName, String columnName, String term) {
         this.term = checkNotNull(term, "term").toLowerCase();
-//        indexName = "suffix-array";
-        //TODO: revert it back to suffix-array or drive it from metadata
-        indexName = "suffixArray";
-        indexSchema = "message TermIndexTable {" +
-                " required binary term (UTF8);" +
-                " required binary doc_ids; }";
-        indexColumn = ColumnPath.fromDotString(columnName);
-        //TODO: should be set from metadata
-        indexTableName = "suffixArrayIndexTable";
+        this.indexColumn = ColumnPath.fromDotString(columnName);
+        this.indexTableName = indexTableName;
     }
 
     @Override
     public String getIndexTypeName() {
-        return indexName;
+        return INDEX_NAME;
     }
 
     @Override
     public MessageType getRequestedSchema() {
-        return MessageTypeParser.parseMessageType(indexSchema);
+        return MessageTypeParser.parseMessageType(INDEX_SCHEMA);
     }
 
     @Override
@@ -74,7 +70,7 @@ public class IndexContainsPredicate extends UserDefinedPredicate<Integer> implem
             docIds = new SortedIntQueue(docIdIterator);
             docIds.init();
         } catch (IOException e) {
-            throw new RuntimeException(String.format("Corrupt %s index on column %s", indexName, indexColumn.toString()), e);
+            throw new RuntimeException(String.format("Corrupt %s index on column %s", INDEX_NAME, indexColumn.toString()), e);
         }
     }
 

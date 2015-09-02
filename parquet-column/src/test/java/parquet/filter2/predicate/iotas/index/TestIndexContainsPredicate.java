@@ -45,10 +45,10 @@ public class TestIndexContainsPredicate {
         ColumnDescriptor idColumn = new ColumnDescriptor(idPath, PrimitiveType.PrimitiveTypeName.BINARY, 0, 0);
 
         EmbeddedTableColumnReaderFactory factory = mock(EmbeddedTableColumnReaderFactory.class);
-        when(factory.getColumnReader("TermIndexTable", termColumn)).thenReturn(termReader);
-        when(factory.getColumnReader("TermIndexTable", idColumn)).thenReturn(idReader);
+        when(factory.getColumnReader("suffixArrayIndexTable", termColumn)).thenReturn(termReader);
+        when(factory.getColumnReader("suffixArrayIndexTable", idColumn)).thenReturn(idReader);
 
-        IndexContainsPredicate predicate = new IndexContainsPredicate("doc_value", "base");
+        IndexContainsPredicate predicate = new IndexContainsPredicate("suffixArrayIndexTable", "doc_value", "base");
         predicate.init(factory);
 
         assertFalse(predicate.canDrop(mock(Statistics.class)));
