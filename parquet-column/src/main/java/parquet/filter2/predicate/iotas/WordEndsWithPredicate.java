@@ -13,16 +13,17 @@ import static parquet.Preconditions.checkNotNull;
 /**
  * Created by abennett on 14/7/15.
  */
-public class IndexContainsPredicate extends SuffixArrayPredicate {
+public class WordEndsWithPredicate extends SuffixArrayPredicate {
 
     private static final String INDEX_SCHEMA = "message TermIndexTable {" +
             " required binary term (UTF8);" +
-            " required binary doc_ids; }";
+            " required binary doc_ids;" +
+            " required binary startsWith; }";
 
     private final String columnName;
     private final String term;
 
-    public IndexContainsPredicate(String indexTableName, String columnName, String term) {
+    public WordEndsWithPredicate(String indexTableName, String columnName, String term) {
         super(INDEX_SCHEMA, indexTableName, columnName);
         checkNotNull(indexTableName, "indexTableName");
         this.columnName = checkNotNull(columnName, "columnName");
@@ -34,7 +35,7 @@ public class IndexContainsPredicate extends SuffixArrayPredicate {
         try {
             ColumnReader termColumn = getTermColumn(columnReaderFactory);
             ColumnReader docIdColumn = getDocIdColumn(columnReaderFactory);
-            long[] pos = SuffixArrayUtils.findTermStartsWithPos(termColumn, term);
+            long[] pos = SuffixArrayUtils.findTermMatchPos(termColumn, term);
             SortedIntIterator docIdIterator = SuffixArrayUtils.getUniqueIdList(docIdColumn, pos);
             SortedIntQueue docIds = new SortedIntQueue(docIdIterator);
             docIds.init();
@@ -43,4 +44,5 @@ public class IndexContainsPredicate extends SuffixArrayPredicate {
             throwCorruptIndexException(e);
         }
     }
+
 }

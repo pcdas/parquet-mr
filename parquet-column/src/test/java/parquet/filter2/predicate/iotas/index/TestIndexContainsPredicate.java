@@ -4,7 +4,6 @@ import org.junit.Test;
 import parquet.column.BatchColumnReader;
 import parquet.column.ColumnDescriptor;
 import parquet.column.iotas.EmbeddedTableColumnReaderFactory;
-import parquet.column.values.delta.DeltaBinaryPackingValuesWriter;
 import parquet.filter2.predicate.Statistics;
 import parquet.filter2.predicate.iotas.IndexContainsPredicate;
 import parquet.io.api.Binary;
@@ -14,6 +13,7 @@ import java.io.IOException;
 
 import static org.mockito.Mockito.*;
 import static org.junit.Assert.*;
+import static parquet.filter2.predicate.iotas.index.TestSuffixArrayUtils.deltaPack;
 
 /**
  * Created by abennett on 16/7/15.
@@ -63,12 +63,5 @@ public class TestIndexContainsPredicate {
         assertFalse(predicate.keep(10));
     }
 
-    private Binary deltaPack(int i) throws IOException {
-        DeltaBinaryPackingValuesWriter writer = new DeltaBinaryPackingValuesWriter(100, 100);
-        writer.writeInteger(i);
-        writer.writeInteger(i + 1);
-        writer.writeInteger(i + 2);
-        return Binary.fromByteArray(writer.getBytes().toByteArray());
-    }
 
 }
