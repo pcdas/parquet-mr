@@ -25,6 +25,10 @@ public abstract class SuffixArrayPredicate extends UserDefinedPredicate<Integer>
 
     //TODO: revert it back to suffix-array
     public static final String INDEX_NAME = "suffixArray";
+    public static final String TABLE_NAME = "TermIndexTable";
+    public static final String TERM_COLUMN = "term";
+    public static final String DOC_IDS_COLUMN = "doc_ids";
+    public static final String STARTS_WITH_FLAG_COLUMN = "starts_with";
 
     private final String indexSchema;
     private final String indexTableName;
@@ -78,21 +82,21 @@ public abstract class SuffixArrayPredicate extends UserDefinedPredicate<Integer>
     }
 
     protected ColumnReader getTermColumn(EmbeddedTableColumnReaderFactory columnReaderFactory) {
-        String[] colPath = {"term"};
+        String[] colPath = {TERM_COLUMN};
         ColumnDescriptor termColumn = new ColumnDescriptor(colPath, PrimitiveType.PrimitiveTypeName.BINARY, 0, 0);
         ColumnReader termReader = columnReaderFactory.getColumnReader(indexTableName, termColumn);
         return termReader;
     }
 
     protected ColumnReader getDocIdColumn(EmbeddedTableColumnReaderFactory columnReaderFactory) {
-        String[] idPath = {"doc_ids"};
+        String[] idPath = {DOC_IDS_COLUMN};
         ColumnDescriptor idColumn = new ColumnDescriptor(idPath, PrimitiveType.PrimitiveTypeName.BINARY, 0, 0);
         ColumnReader idReader = columnReaderFactory.getColumnReader(indexTableName, idColumn);
         return idReader;
     }
 
     protected ColumnReader getWordStartFlagColumn(EmbeddedTableColumnReaderFactory columnReaderFactory) {
-        String[] startsWithFlagPath = {"startsWith"};
+        String[] startsWithFlagPath = {STARTS_WITH_FLAG_COLUMN};
         ColumnDescriptor startsWithFlagColumn = new ColumnDescriptor(startsWithFlagPath, PrimitiveType.PrimitiveTypeName.BINARY, 0, 0);
         ColumnReader startsWithFlagReader = columnReaderFactory.getColumnReader(indexTableName, startsWithFlagColumn);
         return startsWithFlagReader;

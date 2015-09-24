@@ -6,7 +6,6 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 import parquet.bytes.BytesUtils;
 import parquet.column.ColumnReader;
 import parquet.column.values.delta.DeltaBinaryPackingValuesReader;
-import parquet.column.values.plain.BooleanPlainValuesReader;
 import parquet.io.api.Binary;
 
 import java.io.ByteArrayInputStream;
@@ -100,7 +99,7 @@ public class SuffixArrayUtils {
             Binary idBin = readNextBinary(idReader);
             Binary filterBin = readNextBinary(filterReader);
             int[] ids = decodeInt(idBin);
-            BooleanIterator bools = decodeBoolean(filterBin, getCount(idBin));
+            BooleanIterator bools = decodeBoolean(filterBin);
             for (int i: ids) {
                 boolean matchFlag = bools.nextBoolean();
                 if (matchFlag == true)
@@ -151,23 +150,19 @@ public class SuffixArrayUtils {
         return ids;
     }
 
-    private static int getCount(Binary bin) throws IOException {
-        ByteArrayInputStream in = new ByteArrayInputStream(bin.getBytes(), 0, bin.length());
+    public static BooleanIterator decodeBoolean(Binary boolBin) throws IOException {
+        ByteArrayInputStream in = new ByteArrayInputStream(boolBin.getBytes(), 0, boolBin.length());
         BytesUtils.readUnsignedVarInt(in); // skip header value 1
         BytesUtils.readUnsignedVarInt(in); // skip header value 2
-        int count = BytesUtils.readUnsignedVarInt(in);
-        return count;
-    }
-
-    private static BooleanIterator decodeBoolean(Binary boolBin, final int count) throws IOException {
-        final BooleanPlainValuesReader bpvReader = new BooleanPlainValuesReader();
+        final int count = BytesUtils.readUnsignedVarInt(in);
+        final DeltaBinaryPackingValuesReader bpvReader = new DeltaBinaryPackingValuesReader();
         bpvReader.initFromPage(count, boolBin.getBytes(), 0);
         return new BooleanIterator() {
             int read = 0;
             @Override
             public boolean nextBoolean() {
                 read++;
-                return bpvReader.readBoolean();
+                return (bpvReader.readInteger() == 1);
             }
 
             @Override

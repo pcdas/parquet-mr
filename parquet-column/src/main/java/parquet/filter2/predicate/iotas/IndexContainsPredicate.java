@@ -15,9 +15,9 @@ import static parquet.Preconditions.checkNotNull;
  */
 public class IndexContainsPredicate extends SuffixArrayPredicate {
 
-    private static final String INDEX_SCHEMA = "message TermIndexTable {" +
-            " required binary term (UTF8);" +
-            " required binary doc_ids; }";
+    private static final String INDEX_SCHEMA = SuffixArrayIndexSchemaBuilder.newBuilder()
+            .withTermColumn()
+            .withDocIdsColumn().build();
 
     private final String columnName;
     private final String term;

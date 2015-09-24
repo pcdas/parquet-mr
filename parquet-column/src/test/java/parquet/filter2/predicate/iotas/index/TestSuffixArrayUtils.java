@@ -3,8 +3,6 @@ package parquet.filter2.predicate.iotas.index;
 import org.junit.Test;
 import parquet.column.ColumnReader;
 import parquet.column.values.delta.DeltaBinaryPackingValuesWriter;
-import parquet.column.values.plain.BooleanPlainValuesReader;
-import parquet.column.values.plain.BooleanPlainValuesWriter;
 import parquet.io.api.Binary;
 
 import java.io.IOException;
@@ -138,10 +136,10 @@ public class TestSuffixArrayUtils {
     }
 
     public static Binary binaryPackBoolean(boolean a, boolean b, boolean c) throws IOException {
-        BooleanPlainValuesWriter writer = new BooleanPlainValuesWriter();
-        writer.writeBoolean(a);
-        writer.writeBoolean(b);
-        writer.writeBoolean(c);
+        DeltaBinaryPackingValuesWriter writer = new DeltaBinaryPackingValuesWriter(100, 100);
+        writer.writeInteger(a ? 1 : 0);
+        writer.writeInteger(b ? 1 : 0);
+        writer.writeInteger(c ? 1 : 0);
         return Binary.fromByteArray(writer.getBytes().toByteArray());
     }
 }

@@ -15,10 +15,10 @@ import static parquet.Preconditions.checkNotNull;
  */
 public class WordMatchesPredicate extends SuffixArrayPredicate {
 
-    private static final String INDEX_SCHEMA = "message TermIndexTable {" +
-            " required binary term (UTF8);" +
-            " required binary doc_ids;" +
-            " required binary startsWith; }";
+    private static final String INDEX_SCHEMA = SuffixArrayIndexSchemaBuilder.newBuilder()
+            .withTermColumn()
+            .withDocIdsColumn()
+            .withStartsWithColumn().build();
 
     private final String columnName;
     private final String term;

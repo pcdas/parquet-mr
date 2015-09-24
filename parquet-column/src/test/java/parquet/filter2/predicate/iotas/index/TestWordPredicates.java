@@ -5,6 +5,7 @@ import parquet.column.BatchColumnReader;
 import parquet.column.ColumnDescriptor;
 import parquet.column.iotas.EmbeddedTableColumnReaderFactory;
 import parquet.filter2.predicate.Statistics;
+import parquet.filter2.predicate.iotas.SuffixArrayPredicate;
 import parquet.filter2.predicate.iotas.WordEndsWithPredicate;
 import parquet.filter2.predicate.iotas.WordMatchesPredicate;
 import parquet.filter2.predicate.iotas.WordStartsWithPredicate;
@@ -144,13 +145,13 @@ public class TestWordPredicates {
                 binaryPackBoolean(false, true, false),
                 binaryPackBoolean(false, true, false));
 
-        String[] colPath = {"term"};
+        String[] colPath = {SuffixArrayPredicate.TERM_COLUMN};
         ColumnDescriptor termColumn = new ColumnDescriptor(colPath, PrimitiveType.PrimitiveTypeName.BINARY, 0, 0);
 
-        String[] idPath = {"doc_ids"};
+        String[] idPath = {SuffixArrayPredicate.DOC_IDS_COLUMN};
         ColumnDescriptor idColumn = new ColumnDescriptor(idPath, PrimitiveType.PrimitiveTypeName.BINARY, 0, 0);
 
-        String[] flagPath = {"startsWith"};
+        String[] flagPath = {SuffixArrayPredicate.STARTS_WITH_FLAG_COLUMN};
         ColumnDescriptor flagColumn = new ColumnDescriptor(flagPath, PrimitiveType.PrimitiveTypeName.BINARY, 0, 0);
 
         EmbeddedTableColumnReaderFactory factory = mock(EmbeddedTableColumnReaderFactory.class);
