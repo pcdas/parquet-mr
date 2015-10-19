@@ -22,6 +22,7 @@ import static parquet.Log.DEBUG;
 import static parquet.format.Util.writeFileMetaData;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -177,13 +178,26 @@ public class ParquetFileWriter {
   }
 
   /**
+   * @param out the stream for writing
+   * @param schema the schema of the data
+   * @throws IOException if this object can not be created
+   */
+  public ParquetFileWriter(OutputStream out, MessageType schema) throws IOException {
+    super();
+    this.schema = schema;
+    this.out = new FSDataOutputStream(out, new FileSystem.Statistics("parquetm"));
+  }
+
+  /**
    * start the file
    * @throws IOException
    */
   public void start() throws IOException {
     state = state.start();
     if (DEBUG) LOG.debug(out.getPos() + ": start");
-    out.write(MAGIC);
+    // Delay writing the magic marker at position 0 till the first RowGroup (block)
+    // is full and flush to the output stream is initiated.
+    // out.write(MAGIC);
   }
 
   /**
@@ -194,7 +208,8 @@ public class ParquetFileWriter {
   public void startBlock(long recordCount) throws IOException {
     state = state.startBlock();
     if (DEBUG) LOG.debug(out.getPos() + ": start block");
-//    out.write(MAGIC); // TODO: add a magic delimiter
+    if (out.getPos() == 0) // first RowGroup? see comment inside start().
+      out.write(MAGIC);
     currentBlock = new BlockMetaData();
     currentRecordCount = recordCount;
   }

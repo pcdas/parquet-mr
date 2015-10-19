@@ -20,7 +20,6 @@ import java.util.Map;
 import static org.junit.Assert.*;
 import static parquet.column.ParquetProperties.WriterVersion.PARQUET_2_0;
 import static parquet.format.converter.ParquetMetadataConverter.NO_FILTER;
-import static parquet.hadoop.ParquetFileReader.readFooter;
 import static parquet.hadoop.TestUtils.enforceEmptyDir;
 import static parquet.schema.MessageTypeParser.parseMessageType;
 
@@ -45,8 +44,8 @@ public class ParquetEmbeddedTableWriterTest {
 
   SimpleGroupFactory f = new SimpleGroupFactory(schema);
 
-  private ParquetEmbeddedTableWriter<Group> createEmbeddedTableWriter(Path file) throws IOException {
-    ParquetEmbeddedTableWriter<Group> writer = new ParquetEmbeddedTableWriter<Group>(
+  private ParquetEmbeddedTableWriter<Group, Group> createEmbeddedTableWriter(Path file) throws IOException {
+    ParquetEmbeddedTableWriter<Group, Group> writer = new ParquetEmbeddedTableWriter<Group, Group>(
         file,
         ParquetFileWriter.Mode.CREATE,
         new GroupWriteSupport(),
@@ -63,7 +62,7 @@ public class ParquetEmbeddedTableWriterTest {
     return writer;
   }
 
-  private void populateMainTableContent(ParquetEmbeddedTableWriter<Group> writer, int numOfValues) throws IOException {
+  private void populateMainTableContent(ParquetEmbeddedTableWriter<Group, Group> writer, int numOfValues) throws IOException {
     for(int i = 0; i < numOfValues; i++) {
       writer.write(
           f.newGroup()
@@ -102,7 +101,7 @@ public class ParquetEmbeddedTableWriterTest {
 
     Path file = new Path(root, "noEmbeddedTable.par");
 
-    ParquetEmbeddedTableWriter<Group> writer = createEmbeddedTableWriter(file);
+    ParquetEmbeddedTableWriter<Group, Group> writer = createEmbeddedTableWriter(file);
     populateMainTableContent(writer, NUM_OF_MAIN_TABLE_ENTRIES);
     writer.close();
 
@@ -118,7 +117,7 @@ public class ParquetEmbeddedTableWriterTest {
 
     Path file = new Path(root, "oneEmbeddedTable.par");
 
-    ParquetEmbeddedTableWriter<Group> writer = createEmbeddedTableWriter(file);
+    ParquetEmbeddedTableWriter<Group, Group> writer = createEmbeddedTableWriter(file);
 
     populateMainTableContent(writer, NUM_OF_MAIN_TABLE_ENTRIES);
 
@@ -161,7 +160,7 @@ public class ParquetEmbeddedTableWriterTest {
 
     Path file = new Path(root, "twoEmbeddedTables.par");
 
-    ParquetEmbeddedTableWriter<Group> writer = createEmbeddedTableWriter(file);
+    ParquetEmbeddedTableWriter<Group, Group> writer = createEmbeddedTableWriter(file);
 
     populateMainTableContent(writer, NUM_OF_MAIN_TABLE_ENTRIES);
 
@@ -172,7 +171,7 @@ public class ParquetEmbeddedTableWriterTest {
 
     populateEmbeddedTableContent(embWriter, NUM_OF_EMB_TABLE1_ENTRIES);
 
-    EmbeddedTableMetadata embMet2 = new EmbeddedIndexMetadata(EMB_INDEX2, INDEXED_COLUMN, EMB_TABLE1_NAME);
+    EmbeddedTableMetadata embMet2 = new EmbeddedIndexMetadata(EMB_INDEX2, INDEXED_COLUMN, EMB_TABLE2_NAME);
     ParquetEmbeddedTableRecordWriter<Group> embWriter2 =  writer.addEmbeddedTableRecordWriter(
         new GroupWriteSupport(), false, false, embMet2);
 
