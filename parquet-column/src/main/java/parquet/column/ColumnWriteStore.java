@@ -37,6 +37,20 @@ public interface ColumnWriteStore {
   abstract public void flush();
 
   /**
+   * when we are done partially writing to flush to the underlying storage,
+   * but indicate that more records will be added later. So, the implementation
+   * keeps the underlying book-keeping intact for later intermediate
+   * or final flush.
+   * @param isFinalFlush false if it is an intermediate flush invocation.
+   */
+  default void flush(boolean isFinalFlush) {
+    if (isFinalFlush)
+      flush();
+    else
+      throw new RuntimeException("Not implemented.");
+  }
+
+  /**
    * called to notify of record boundaries
    */
   abstract public void endRecord();

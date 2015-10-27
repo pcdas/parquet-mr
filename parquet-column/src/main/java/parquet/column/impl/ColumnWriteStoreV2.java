@@ -109,12 +109,17 @@ public class ColumnWriteStoreV2 implements ColumnWriteStore {
 
   @Override
   public void flush() {
+    flush(true);
+  }
+
+  @Override
+  public void flush(boolean resetAfterFlush) {
     for (ColumnWriterV2 memColumn : columns.values()) {
       long rows = rowCount - memColumn.getRowsWrittenSoFar();
       if (rows > 0) {
         memColumn.writePage(rowCount);
       }
-      memColumn.finalizeColumnChunk();
+      memColumn.finalizeColumnChunk(resetAfterFlush);
     }
   }
 

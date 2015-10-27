@@ -121,9 +121,14 @@ public class ColumnWriteStoreV1 implements ColumnWriteStore {
 
   @Override
   public void flush() {
+    flush(true);
+  }
+
+  @Override
+  public void flush(boolean resetAfterFlush) {
     Collection<ColumnWriterV1> values = columns.values();
     for (ColumnWriterV1 memColumn : values) {
-      memColumn.flush();
+      memColumn.flush(resetAfterFlush);
     }
   }
 

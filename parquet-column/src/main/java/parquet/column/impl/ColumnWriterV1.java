@@ -237,6 +237,10 @@ final class ColumnWriterV1 implements ColumnWriter {
   }
 
   public void flush() {
+    flush(true);
+  }
+
+  void flush(boolean resetAfterFlush) {
     if (valueCount > 0) {
       writePage();
     }
@@ -248,7 +252,8 @@ final class ColumnWriterV1 implements ColumnWriter {
       } catch (IOException e) {
         throw new ParquetEncodingException("could not write dictionary page for " + path, e);
       }
-      dataColumn.resetDictionary();
+      if (resetAfterFlush)
+        dataColumn.resetDictionary();
     }
   }
 
