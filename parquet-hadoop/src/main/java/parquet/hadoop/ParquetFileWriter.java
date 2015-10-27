@@ -79,7 +79,7 @@ public class ParquetFileWriter {
   private static final ParquetMetadataConverter metadataConverter = new ParquetMetadataConverter();
 
   private final MessageType schema;
-  protected final FSDataOutputStream out;
+  protected FSDataOutputStream out; // not final because of restart()
   protected BlockMetaData currentBlock;
   private ColumnChunkMetaData currentColumn;
   protected long currentRecordCount;
@@ -198,6 +198,15 @@ public class ParquetFileWriter {
     // Delay writing the magic marker at position 0 till the first RowGroup (block)
     // is full and flush to the output stream is initiated.
     // out.write(MAGIC);
+  }
+
+  /**
+   * Re-start after flushing
+   * @throws IOException
+   */
+  public void restart() throws IOException {
+    state = STATE.STARTED;
+    out = new FSDataOutputStream(out.getWrappedStream(), new FileSystem.Statistics("parquetm"));
   }
 
   /**
@@ -421,6 +430,7 @@ public class ParquetFileWriter {
     ParquetMetadata footer = new ParquetMetadata(new FileMetaData(schema, extraMetaData, Version.FULL_VERSION), blocks);
     serializeFooter(footer, out);
     out.close();
+    blocks.clear();
   }
 
   protected static void serializeFooter(ParquetMetadata footer, FSDataOutputStream out) throws IOException {

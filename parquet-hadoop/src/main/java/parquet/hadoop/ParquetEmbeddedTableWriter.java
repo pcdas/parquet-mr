@@ -233,4 +233,35 @@ public class ParquetEmbeddedTableWriter<T, I> implements Closeable {
     }
   }
 
+  /**
+   * Flushes the records including the embedded records to parquet file as if close
+   * was invoked on the writer, but does not close the writer. This call is useful
+   * for taking a consistent snapshot of Parquet file content, but more records can
+   * be appended after this call. The subsequent flushAsIfClose() will contain all
+   * the previous records and the newly added ones until close is called.
+   *
+   * This call allows incremental addition of records to an in-memory cached parquet
+   * format file efficiently, as the encoding of all the previous records can be
+   * avoided and incremental encoding cost is incurred.
+   *
+   * @throws IOException
+   */
+  public void flushAsIfClose() throws IOException {
+
+    Map<String, String> embeddedTablesMetadata = new HashMap<String, String>();
+    try {
+
+      for(ParquetEmbeddedTableRecordWriter<?> embeddedTableWriter : embeddedTableWriters) {
+        embeddedTableWriter.flushAsIfClose();
+        embeddedTableWriter.getEmbeddedTableMetadata()
+            .addEmbeddedTableMetadataToFileMetadata(embeddedTablesMetadata);
+      }
+
+      recWriter.flushAsIfClose(embeddedTablesMetadata);
+
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    }
+  }
+
 }
