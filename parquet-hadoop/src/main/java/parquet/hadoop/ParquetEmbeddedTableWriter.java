@@ -40,7 +40,7 @@ import java.util.Map;
  * Created by Jaspreet Singh
  * @author pdas
  */
-public class ParquetEmbeddedTableWriter<T, I> implements Closeable {
+public class ParquetEmbeddedTableWriter<T> implements Closeable {
 
   public static final int DEFAULT_BLOCK_SIZE = 128 * 1024 * 1024;
   public static final int DEFAULT_PAGE_SIZE = 1 * 1024 * 1024;
@@ -151,7 +151,7 @@ public class ParquetEmbeddedTableWriter<T, I> implements Closeable {
    * @param embeddedTableMetadata     metadata for the embedded table. written to parquet file
    *                                  metadata
    */
-  public ParquetEmbeddedTableRecordWriter<I> addEmbeddedTableRecordWriter(
+  public <I> ParquetEmbeddedTableRecordWriter<I> addEmbeddedTableRecordWriter(
       WriteSupport<I> embeddedTableWriteSupport,
       boolean enableDictionary,
       boolean validating,
