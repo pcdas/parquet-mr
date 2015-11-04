@@ -80,6 +80,8 @@ public class ParquetFileWriter {
 
   private final MessageType schema;
   protected FSDataOutputStream out; // not final because of restart()
+  private final boolean restartAllowed; // allowed when writing to any OutputStream
+  private final FileSystem.Statistics stats; // required for supporting any OutputStream
   protected BlockMetaData currentBlock;
   private ColumnChunkMetaData currentColumn;
   protected long currentRecordCount;
@@ -175,6 +177,8 @@ public class ParquetFileWriter {
     FileSystem fs = file.getFileSystem(configuration);
     boolean overwriteFlag = (mode == Mode.OVERWRITE);
     this.out = fs.create(file, overwriteFlag);
+    this.restartAllowed = false;
+    this.stats = null;
   }
 
   /**
@@ -185,7 +189,9 @@ public class ParquetFileWriter {
   public ParquetFileWriter(OutputStream out, MessageType schema) throws IOException {
     super();
     this.schema = schema;
-    this.out = new FSDataOutputStream(out, new FileSystem.Statistics("parquetm"));
+    this.stats =  new FileSystem.Statistics("iotas");
+    this.out = new FSDataOutputStream(out, stats);
+    this.restartAllowed = true;
   }
 
   /**
@@ -205,8 +211,11 @@ public class ParquetFileWriter {
    * @throws IOException
    */
   public void restart() throws IOException {
+    if (!restartAllowed)
+      throw new IOException("reset not yet supported after flushing to a file.");
     state = STATE.STARTED;
-    out = new FSDataOutputStream(out.getWrappedStream(), new FileSystem.Statistics("parquetm"));
+    stats.reset();
+    out = new FSDataOutputStream(out.getWrappedStream(), stats);
   }
 
   /**
