@@ -178,6 +178,10 @@ class ColumnChunkPageWriteStore implements PageWriteStore {
       if (dictionaryPage != null) {
         writer.writeDictionaryPage(dictionaryPage);
         encodings.add(dictionaryPage.getEncoding());
+        // Allow the dictionary page to be recreated. This is required for the scenario when a
+        // non-final flush to the underlying file storage is made for snapshot writing.
+        // See writeDictionaryPage(DictionaryPage page) method of this class, which expects
+        // the dictionary page to be created only once.
         dictionaryPage = null;
       }
       writer.writeDataPages(buf, uncompressedLength, compressedLength, totalStatistics, new ArrayList<Encoding>(encodings));
