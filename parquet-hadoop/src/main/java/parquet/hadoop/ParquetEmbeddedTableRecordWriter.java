@@ -94,7 +94,7 @@ public class ParquetEmbeddedTableRecordWriter<E> {
    *
    * @throws IOException
    */
-  private void flushEmbeddedRowGroupToStore() throws IOException {
+  private void flushEmbeddedRowGroupToStore(boolean closeAfterFlush) throws IOException {
     long currentSize = internalWriter.getCurrentSize();
     long recordCount = internalWriter.getRecordCount();
 
@@ -107,12 +107,35 @@ public class ParquetEmbeddedTableRecordWriter<E> {
     if (recordCount > 0) {
       embTableFileWriter.startEmbeddedTableBlock(recordCount);
 
-      internalWriter.flushColumnStore();
-      internalWriter.flushPageStore();
+      internalWriter.flushColumnStore(closeAfterFlush);
+      internalWriter.flushPageStore(closeAfterFlush);
 
       embTableFileWriter.endEmbeddedTableBlock();
     }
 
+  }
+
+  /**
+   * flushes the embedded table content to parquet file, writes the footer for embedded
+   * table content and updates embeddedTableMetadata, but this writer remains open for
+   * further writing.
+   *
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public void flushAsIfClose() throws IOException, InterruptedException {
+    flushAndThenClose(false);
+  }
+
+  public void flushAndThenClose(boolean closeAfterFlush) throws IOException, InterruptedException {
+    flushEmbeddedRowGroupToStore(closeAfterFlush);
+    FinalizedWriteContext finalWriteContext = writeSupport.finalizeWrite();
+
+    extraMetadata.putAll(finalWriteContext.getExtraMetaData());
+
+    this.embeddedTableMetadata.setEmbeddedTableFooterPosition(embTableFileWriter.getPos());
+
+    embTableFileWriter.writeEmbeddedTableFooter(schema, extraMetadata);
   }
 
   /**
@@ -123,14 +146,7 @@ public class ParquetEmbeddedTableRecordWriter<E> {
    * @throws InterruptedException
    */
   public void close() throws IOException, InterruptedException {
-    flushEmbeddedRowGroupToStore();
-    FinalizedWriteContext finalWriteContext = writeSupport.finalizeWrite();
-
-    extraMetadata.putAll(finalWriteContext.getExtraMetaData());
-
-    this.embeddedTableMetadata.setEmbeddedTableFooterPosition(embTableFileWriter.getPos());
-
-    embTableFileWriter.writeEmbeddedTableFooter(schema, extraMetadata);
+    flushAndThenClose(true);
   }
 
   public EmbeddedTableMetadata getEmbeddedTableMetadata() {

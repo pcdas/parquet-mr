@@ -20,7 +20,6 @@ import java.util.Map;
 import static org.junit.Assert.*;
 import static parquet.column.ParquetProperties.WriterVersion.PARQUET_2_0;
 import static parquet.format.converter.ParquetMetadataConverter.NO_FILTER;
-import static parquet.hadoop.ParquetFileReader.readFooter;
 import static parquet.hadoop.TestUtils.enforceEmptyDir;
 import static parquet.schema.MessageTypeParser.parseMessageType;
 
@@ -172,7 +171,7 @@ public class ParquetEmbeddedTableWriterTest {
 
     populateEmbeddedTableContent(embWriter, NUM_OF_EMB_TABLE1_ENTRIES);
 
-    EmbeddedTableMetadata embMet2 = new EmbeddedIndexMetadata(EMB_INDEX2, INDEXED_COLUMN, EMB_TABLE1_NAME);
+    EmbeddedTableMetadata embMet2 = new EmbeddedIndexMetadata(EMB_INDEX2, INDEXED_COLUMN, EMB_TABLE2_NAME);
     ParquetEmbeddedTableRecordWriter<Group> embWriter2 =  writer.addEmbeddedTableRecordWriter(
         new GroupWriteSupport(), false, false, embMet2);
 

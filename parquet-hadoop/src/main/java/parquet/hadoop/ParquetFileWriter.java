@@ -22,6 +22,7 @@ import static parquet.Log.DEBUG;
 import static parquet.format.Util.writeFileMetaData;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -78,7 +79,9 @@ public class ParquetFileWriter {
   private static final ParquetMetadataConverter metadataConverter = new ParquetMetadataConverter();
 
   private final MessageType schema;
-  protected final FSDataOutputStream out;
+  protected FSDataOutputStream out; // not final because of restart()
+  private final boolean restartAllowed; // allowed when writing to any OutputStream
+  private final FileSystem.Statistics stats; // required for supporting any OutputStream
   protected BlockMetaData currentBlock;
   private ColumnChunkMetaData currentColumn;
   protected long currentRecordCount;
@@ -174,6 +177,21 @@ public class ParquetFileWriter {
     FileSystem fs = file.getFileSystem(configuration);
     boolean overwriteFlag = (mode == Mode.OVERWRITE);
     this.out = fs.create(file, overwriteFlag);
+    this.restartAllowed = false;
+    this.stats = null;
+  }
+
+  /**
+   * @param out the stream for writing
+   * @param schema the schema of the data
+   * @throws IOException if this object can not be created
+   */
+  public ParquetFileWriter(OutputStream out, MessageType schema) throws IOException {
+    super();
+    this.schema = schema;
+    this.stats =  new FileSystem.Statistics("iotas");
+    this.out = new FSDataOutputStream(out, stats);
+    this.restartAllowed = true;
   }
 
   /**
@@ -183,7 +201,21 @@ public class ParquetFileWriter {
   public void start() throws IOException {
     state = state.start();
     if (DEBUG) LOG.debug(out.getPos() + ": start");
-    out.write(MAGIC);
+    // Delay writing the magic marker at position 0 till the first RowGroup (block)
+    // is full and flush to the output stream is initiated.
+    // out.write(MAGIC);
+  }
+
+  /**
+   * Re-start after flushing
+   * @throws IOException
+   */
+  public void restart() throws IOException {
+    if (!restartAllowed)
+      throw new IOException("reset not yet supported after flushing to a file.");
+    state = STATE.STARTED;
+    stats.reset();
+    out = new FSDataOutputStream(out.getWrappedStream(), stats);
   }
 
   /**
@@ -194,7 +226,8 @@ public class ParquetFileWriter {
   public void startBlock(long recordCount) throws IOException {
     state = state.startBlock();
     if (DEBUG) LOG.debug(out.getPos() + ": start block");
-//    out.write(MAGIC); // TODO: add a magic delimiter
+    if (out.getPos() == 0) // first RowGroup? see comment inside start().
+      out.write(MAGIC);
     currentBlock = new BlockMetaData();
     currentRecordCount = recordCount;
   }
@@ -406,6 +439,7 @@ public class ParquetFileWriter {
     ParquetMetadata footer = new ParquetMetadata(new FileMetaData(schema, extraMetaData, Version.FULL_VERSION), blocks);
     serializeFooter(footer, out);
     out.close();
+    blocks.clear();
   }
 
   protected static void serializeFooter(ParquetMetadata footer, FSDataOutputStream out) throws IOException {

@@ -33,6 +33,9 @@
   <url>https://parquet.incubator.apache.org</url>
 
   <properties>
+    <targetJavaVersion>1.8</targetJavaVersion>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>${targetJavaVersion}</maven.compiler.target>
   </properties>
 
   <dependencies>

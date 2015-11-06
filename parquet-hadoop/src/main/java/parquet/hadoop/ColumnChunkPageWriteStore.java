@@ -173,11 +173,16 @@ class ColumnChunkPageWriteStore implements PageWriteStore {
       return buf.size();
     }
 
-    public void writeToFileWriter(ParquetFileWriter writer) throws IOException {
+    public void writeToFileWriter(ParquetFileWriter writer, boolean resetAfterWrite) throws IOException {
       writer.startColumn(path, totalValueCount, compressor.getCodecName());
       if (dictionaryPage != null) {
         writer.writeDictionaryPage(dictionaryPage);
         encodings.add(dictionaryPage.getEncoding());
+        // Allow the dictionary page to be recreated. This is required for the scenario when a
+        // non-final flush to the underlying file storage is made for snapshot writing.
+        // See writeDictionaryPage(DictionaryPage page) method of this class, which expects
+        // the dictionary page to be created only once.
+        dictionaryPage = null;
       }
       writer.writeDataPages(buf, uncompressedLength, compressedLength, totalStatistics, new ArrayList<Encoding>(encodings));
       writer.endColumn();
@@ -191,8 +196,15 @@ class ColumnChunkPageWriteStore implements PageWriteStore {
                     dictionaryPage.getDictionarySize(), dictionaryPage.getUncompressedSize(), dictionaryPage.getDictionarySize())
                     : ""));
       }
-      encodings.clear();
-      pageCount = 0;
+      if (resetAfterWrite) {
+        encodings.clear();
+        pageCount = 0;
+        uncompressedLength = 0;
+        compressedLength = 0;
+        totalValueCount = 0;
+        buf.reset();
+        totalStatistics = getStatsBasedOnType(this.path.getType());
+      }
     }
 
     @Override
@@ -233,9 +245,13 @@ class ColumnChunkPageWriteStore implements PageWriteStore {
   }
 
   public void flushToFileWriter(ParquetFileWriter writer) throws IOException {
+    flushToFileWriter(writer, true);
+  }
+
+  public void flushToFileWriter(ParquetFileWriter writer, boolean resetAfterFlush) throws IOException {
     for (ColumnDescriptor path : schema.getColumns()) {
       ColumnChunkPageWriter pageWriter = writers.get(path);
-      pageWriter.writeToFileWriter(writer);
+      pageWriter.writeToFileWriter(writer, resetAfterFlush);
     }
   }
 

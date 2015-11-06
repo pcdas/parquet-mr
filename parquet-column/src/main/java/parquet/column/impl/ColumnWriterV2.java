@@ -209,6 +209,16 @@ final class ColumnWriterV2 implements ColumnWriter {
    * Is called right after writePage
    */
   public void finalizeColumnChunk() {
+    finalizeColumnChunk(true);
+  }
+
+  /**
+   * Finalizes the Column chunk. Possibly adding extra pages if needed (dictionary, ...)
+   * Is called right after writePage
+   *
+   * @param resetAfterFinalize false if the underlying dictionary shouldn't be reset.
+   */
+  void finalizeColumnChunk(boolean resetAfterFinalize) {
     final DictionaryPage dictionaryPage = dataColumn.createDictionaryPage();
     if (dictionaryPage != null) {
       if (DEBUG) LOG.debug("write dictionary");
@@ -217,7 +227,8 @@ final class ColumnWriterV2 implements ColumnWriter {
       } catch (IOException e) {
         throw new ParquetEncodingException("could not write dictionary page for " + path, e);
       }
-      dataColumn.resetDictionary();
+      if (resetAfterFinalize)
+        dataColumn.resetDictionary();
     }
   }
 

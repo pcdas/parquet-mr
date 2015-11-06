@@ -110,11 +110,21 @@ class InternalParquetRecordWriter<T> {
   }
 
   public void close() throws IOException, InterruptedException {
-    flushRowGroupToStore();
+    flushAndClose(true);
+  }
+
+  public void flushAsIfClose() throws IOException, InterruptedException {
+    flushAndClose(false);
+  }
+
+  private void flushAndClose(boolean closeAfterFlush)
+      throws IOException, InterruptedException {
+    flushRowGroupToStore(closeAfterFlush);
     FinalizedWriteContext finalWriteContext = writeSupport.finalizeWrite();
     Map<String, String> finalMetadata = new HashMap<String, String>(extraMetaData);
     finalMetadata.putAll(finalWriteContext.getExtraMetaData());
     parquetFileWriter.end(finalMetadata);
+    if (!closeAfterFlush) parquetFileWriter.restart();
   }
 
   public void write(T value) throws IOException, InterruptedException {
@@ -128,7 +138,7 @@ class InternalParquetRecordWriter<T> {
       long memSize = columnStore.getBufferedSize();
       if (memSize > rowGroupSizeThreshold) {
         LOG.info(format("mem size %,d > %,d: flushing %,d records to disk.", memSize, rowGroupSizeThreshold, recordCount));
-        flushRowGroupToStore();
+        flushRowGroupToStore(true);
         initStore();
         recordCountForNextMemCheck = min(max(MINIMUM_RECORD_COUNT_FOR_CHECK, recordCount / 2), MAXIMUM_RECORD_COUNT_FOR_CHECK);
       } else {
@@ -142,7 +152,7 @@ class InternalParquetRecordWriter<T> {
     }
   }
 
-  protected void flushRowGroupToStore()
+  protected void flushRowGroupToStore(boolean closeAfterFlush)
       throws IOException {
     LOG.info(format("Flushing mem columnStore to file. allocated memory: %,d", columnStore.getAllocatedSize()));
     if (columnStore.getAllocatedSize() > 3 * (long)rowGroupSizeThreshold) {
@@ -151,14 +161,16 @@ class InternalParquetRecordWriter<T> {
 
     if (recordCount > 0) {
       parquetFileWriter.startBlock(recordCount);
-      columnStore.flush();
-      pageStore.flushToFileWriter(parquetFileWriter);
-      recordCount = 0;
+      columnStore.flush(closeAfterFlush);
+      pageStore.flushToFileWriter(parquetFileWriter, closeAfterFlush);
       parquetFileWriter.endBlock();
     }
 
-    columnStore = null;
-    pageStore = null;
+    if (closeAfterFlush) {
+      recordCount = 0;
+      columnStore = null;
+      pageStore = null;
+    }
   }
 
   long getRowGroupSizeThreshold() {

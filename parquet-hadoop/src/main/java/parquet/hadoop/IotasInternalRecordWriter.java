@@ -18,13 +18,12 @@
  */
 package parquet.hadoop;
 
+import java.io.IOException;
+import java.util.Map;
+
 import parquet.column.ParquetProperties;
 import parquet.hadoop.api.WriteSupport;
 import parquet.schema.MessageType;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Extension of InternalParquetRecordWriter.
@@ -97,12 +96,21 @@ class IotasInternalRecordWriter<T> extends InternalParquetRecordWriter<T> {
     super.close();
   }
 
+  public void flushAsIfClose(Map<String, String> embeddedTableMetadata)
+      throws IOException, InterruptedException {
+
+    extraMetaData.putAll(embeddedTableMetadata);
+
+    super.flushAsIfClose();
+  }
+
   /**
    * provides a way to flush without invoking startBlock and endBlock.
    */
-  public void flushColumnStore() {
-    columnStore.flush();
-    columnStore = null;
+  public void flushColumnStore(boolean closeAfterFlush) {
+    columnStore.flush(closeAfterFlush);
+    if (closeAfterFlush)
+      columnStore = null;
   }
 
   /**
@@ -111,9 +119,10 @@ class IotasInternalRecordWriter<T> extends InternalParquetRecordWriter<T> {
    *
    * @throws IOException
    */
-  public void flushPageStore() throws IOException {
-    pageStore.flushToFileWriter(parquetFileWriter);
-    pageStore = null;
+  public void flushPageStore(boolean closeAfterFlush) throws IOException {
+    pageStore.flushToFileWriter(parquetFileWriter, closeAfterFlush);
+    if (closeAfterFlush)
+      pageStore = null;
   }
 
   public long getRecordCount() {

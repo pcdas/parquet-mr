@@ -20,6 +20,7 @@ package parquet.hadoop.iotas;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+
 import parquet.Log;
 import parquet.Version;
 import parquet.hadoop.ParquetFileWriter;
@@ -27,10 +28,10 @@ import parquet.hadoop.metadata.BlockMetaData;
 import parquet.hadoop.metadata.FileMetaData;
 import parquet.hadoop.metadata.ParquetMetadata;
 import parquet.schema.MessageType;
-
 import static parquet.Log.DEBUG;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -56,6 +57,11 @@ public class ParquetEmbeddedTableFileWriter extends ParquetFileWriter {
                                         Path file,
                                         Mode mode) throws IOException {
     super(configuration, schema, file, mode);
+  }
+
+  public ParquetEmbeddedTableFileWriter(OutputStream out, MessageType schema)
+      throws IOException {
+    super(out, schema);
   }
 
   /**

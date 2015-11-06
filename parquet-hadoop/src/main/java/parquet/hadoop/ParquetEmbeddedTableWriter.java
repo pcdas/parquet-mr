@@ -38,6 +38,7 @@ import java.util.Map;
  * Writes records and embedded table records to a parquet file.
  *
  * Created by Jaspreet Singh
+ * @author pdas
  */
 public class ParquetEmbeddedTableWriter<T> implements Closeable {
 
@@ -51,15 +52,14 @@ public class ParquetEmbeddedTableWriter<T> implements Closeable {
       ParquetProperties.WriterVersion.PARQUET_1_0;
 
   private final IotasInternalRecordWriter<T> recWriter;
-  private List<ParquetEmbeddedTableRecordWriter> embeddedTableWriters = new ArrayList<ParquetEmbeddedTableRecordWriter>();
+  private List<ParquetEmbeddedTableRecordWriter<?>> embeddedTableWriters =
+      new ArrayList<ParquetEmbeddedTableRecordWriter<?>>();
   private ParquetEmbeddedTableFileWriter fileWriter;
   private Configuration conf;
   private long blockSize;
   private int pageSize;
   private int dictionaryPageSize;
   private CodecFactory.BytesCompressor compressor;
-  private boolean enableDictionary;
-  private boolean validating;
   private ParquetProperties.WriterVersion writerVersion;
 
   public ParquetEmbeddedTableWriter(
@@ -75,25 +75,63 @@ public class ParquetEmbeddedTableWriter<T> implements Closeable {
       ParquetProperties.WriterVersion writerVersion,
       Configuration conf) throws IOException {
 
+    WriteSupport.WriteContext writeContext = writeSupport.init(conf);
+    MessageType schema = writeContext.getSchema();
+
+    fileWriter = new ParquetEmbeddedTableFileWriter(conf, schema, file, mode);
+    this.recWriter = initialize(fileWriter, writeSupport, schema, writeContext.getExtraMetaData(),
+        compressionCodecName, blockSize, pageSize, dictionaryPageSize, enableDictionary,
+        validating, writerVersion, conf);
+  }
+
+  public ParquetEmbeddedTableWriter(
+      ParquetEmbeddedTableFileWriter fileWriter,
+      WriteSupport<T> writeSupport,
+      MessageType schema,
+      Map<String, String> extraMetadata,
+      CompressionCodecName compressionCodecName,
+      long blockSize,
+      int pageSize,
+      int dictionaryPageSize,
+      boolean enableDictionary,
+      boolean validating,
+      ParquetProperties.WriterVersion writerVersion,
+      Configuration conf) throws IOException {
+
+    this.recWriter = initialize(fileWriter, writeSupport, schema, extraMetadata,
+        compressionCodecName, blockSize, pageSize, dictionaryPageSize, enableDictionary,
+        validating, writerVersion, conf);
+  }
+
+  private IotasInternalRecordWriter<T> initialize(
+      ParquetEmbeddedTableFileWriter fileWriter,
+      WriteSupport<T> writeSupport,
+      MessageType schema,
+      Map<String, String> extraMetadata,
+      CompressionCodecName compressionCodecName,
+      long blockSize,
+      int pageSize,
+      int dictionaryPageSize,
+      boolean enableDictionary,
+      boolean validating,
+      ParquetProperties.WriterVersion writerVersion,
+      Configuration conf) throws IOException {
+
     this.conf = conf;
     this.blockSize = blockSize;
     this.pageSize = pageSize;
     this.dictionaryPageSize = dictionaryPageSize;
     this.writerVersion = writerVersion;
-
-    WriteSupport.WriteContext writeContext = writeSupport.init(conf);
-    MessageType schema = writeContext.getSchema();
-
-    fileWriter = new ParquetEmbeddedTableFileWriter(conf, schema, file, mode);
-    fileWriter.start();
+    this.fileWriter = fileWriter;
+    fileWriter.start(); // make it ready to receive flushed records
 
     CodecFactory codecFactory = new CodecFactory(conf);
-    compressor =	codecFactory.getCompressor(compressionCodecName, 0);
-    this.recWriter = new IotasInternalRecordWriter<T>(
+    compressor =  codecFactory.getCompressor(compressionCodecName, 0);
+    return new IotasInternalRecordWriter<T>(
         fileWriter,
         writeSupport,
         schema,
-        writeContext.getExtraMetaData(),
+        extraMetadata,
         blockSize,
         pageSize,
         compressor,
@@ -102,7 +140,7 @@ public class ParquetEmbeddedTableWriter<T> implements Closeable {
         validating,
         writerVersion);
   }
-
+ 
   /**
    * Adds an embedded table record writer. Use write on this returned embedded table writer to write
    * embedded table records.
@@ -122,7 +160,7 @@ public class ParquetEmbeddedTableWriter<T> implements Closeable {
     WriteSupport.WriteContext embTableWriteContext = embeddedTableWriteSupport.init(conf);
     MessageType embTableSchema = embTableWriteContext.getSchema();
 
-    ParquetEmbeddedTableRecordWriter embeddedTableRecWriter =
+    ParquetEmbeddedTableRecordWriter<I> embeddedTableRecWriter =
         new ParquetEmbeddedTableRecordWriter<I>(
             fileWriter,
             embeddedTableWriteSupport,
@@ -162,7 +200,7 @@ public class ParquetEmbeddedTableWriter<T> implements Closeable {
    */
   public long getCurrentSize() {
     long curSize = 0;
-    for(ParquetEmbeddedTableRecordWriter embeddedTableWriter : embeddedTableWriters) {
+    for(ParquetEmbeddedTableRecordWriter<?> embeddedTableWriter : embeddedTableWriters) {
       curSize += embeddedTableWriter.getCurrentSize();
     }
 
@@ -182,13 +220,44 @@ public class ParquetEmbeddedTableWriter<T> implements Closeable {
     Map<String, String> embeddedTablesMetadata = new HashMap<String, String>();
     try {
 
-      for(ParquetEmbeddedTableRecordWriter embeddedTableWriter : embeddedTableWriters) {
+      for(ParquetEmbeddedTableRecordWriter<?> embeddedTableWriter : embeddedTableWriters) {
         embeddedTableWriter.close();
         embeddedTableWriter.getEmbeddedTableMetadata()
             .addEmbeddedTableMetadataToFileMetadata(embeddedTablesMetadata);
       }
 
       recWriter.close(embeddedTablesMetadata);
+
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * Flushes the records including the embedded records to parquet file as if close
+   * was invoked on the writer, but does not close the writer. This call is useful
+   * for taking a consistent snapshot of Parquet file content, but more records can
+   * be appended after this call. The subsequent flushAsIfClose() will contain all
+   * the previous records and the newly added ones until close is called.
+   *
+   * This call allows incremental addition of records to an in-memory cached parquet
+   * format file efficiently, as the encoding of all the previous records can be
+   * avoided and incremental encoding cost is incurred.
+   *
+   * @throws IOException
+   */
+  public void flushAsIfClose() throws IOException {
+
+    Map<String, String> embeddedTablesMetadata = new HashMap<String, String>();
+    try {
+
+      for(ParquetEmbeddedTableRecordWriter<?> embeddedTableWriter : embeddedTableWriters) {
+        embeddedTableWriter.flushAsIfClose();
+        embeddedTableWriter.getEmbeddedTableMetadata()
+            .addEmbeddedTableMetadataToFileMetadata(embeddedTablesMetadata);
+      }
+
+      recWriter.flushAsIfClose(embeddedTablesMetadata);
 
     } catch (InterruptedException e) {
       throw new IOException(e);
