@@ -20,6 +20,7 @@ package parquet.hadoop;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static parquet.column.Encoding.DELTA_BYTE_ARRAY;
 import static parquet.column.Encoding.PLAIN;
@@ -33,6 +34,7 @@ import static parquet.hadoop.TestUtils.enforceEmptyDir;
 import static parquet.hadoop.metadata.CompressionCodecName.UNCOMPRESSED;
 import static parquet.schema.MessageTypeParser.parseMessageType;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -126,4 +128,36 @@ public class TestParquetWriter {
       }
     }
   }
+
+  @Test
+  public void testEmptyFileWrite() throws IOException {
+    Configuration conf = new Configuration();
+    Path pathroot = new Path("target/tests/EmptyParquetWriter");
+    enforceEmptyDir(conf, pathroot);
+
+    Path path = new Path(pathroot, "emptyFile.parquet");
+
+    MessageType schema = parseMessageType(
+        "message test { "
+            + "required binary binary_field; "
+            + "required int32 int32_field; "
+            + "required int64 int64_field; "
+            + "required boolean boolean_field; "
+            + "required float float_field; "
+            + "required double double_field; "
+            + "required fixed_len_byte_array(3) flba_field; "
+            + "required int96 int96_field; "
+            + "} ");
+    GroupWriteSupport.setSchema(schema, conf);
+
+    ParquetWriter<Group> testWriter = new ParquetWriter<Group>(path, conf, new GroupWriteSupport());
+    testWriter.close();
+
+    ParquetMetadata footer = readFooter(conf, path, NO_FILTER);
+    assertNotNull(footer);
+
+    MessageType readSchema = footer.getFileMetaData().getSchema();
+    assertTrue(readSchema.getName().equals(schema.getName()));
+  }
+
 }

@@ -59,7 +59,9 @@ class InternalParquetRecordWriter<T> {
   private final boolean validating;
   private final ParquetProperties parquetProperties;
 
+  protected int rowGroupCount = 0;
   protected long recordCount = 0;
+  protected long recordCountAtLastFlush = 0;
   private long recordCountForNextMemCheck = MINIMUM_RECORD_COUNT_FOR_CHECK;
 
   protected ColumnWriteStore columnStore;
@@ -152,6 +154,10 @@ class InternalParquetRecordWriter<T> {
     }
   }
 
+  protected long incrementalRecordCount() {
+    return (recordCount - recordCountAtLastFlush);
+  }
+
   protected void flushRowGroupToStore(boolean closeAfterFlush)
       throws IOException {
     LOG.info(format("Flushing mem columnStore to file. allocated memory: %,d", columnStore.getAllocatedSize()));
@@ -159,15 +165,19 @@ class InternalParquetRecordWriter<T> {
       LOG.warn("Too much memory used: " + columnStore.memUsageString());
     }
 
-    if (recordCount > 0) {
+    if ((rowGroupCount == 0 && recordCount == 0) // empty parquet file
+        || incrementalRecordCount() > 0) {
       parquetFileWriter.startBlock(recordCount);
       columnStore.flush(closeAfterFlush);
       pageStore.flushToFileWriter(parquetFileWriter, closeAfterFlush);
       parquetFileWriter.endBlock();
+      recordCountAtLastFlush = recordCount;
     }
 
     if (closeAfterFlush) {
+      rowGroupCount++;
       recordCount = 0;
+      recordCountAtLastFlush = 0;
       columnStore = null;
       pageStore = null;
     }
